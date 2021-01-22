@@ -1,0 +1,638 @@
+---
+title: "<center><div class='mytitle'>Exploring the Effects of Lifestyle and Environment on Male Fertility</div></center>"
+author: "<center><div class='mysubtitle'>Francesca Abulencia</div></center>"
+date: "<center><div class='mysubtitle'>April 27, 2020</div></center>"
+output:
+  html_document:
+    bootstrap_version: 4+3
+    css: style.css
+    theme: minty
+    code_folding: hide
+    toc: FALSE 
+    toc_depth: 5   
+    number_sections: FALSE  
+    highlight: tango  
+    includes:
+       before_body: myheader.html
+---
+![](C:/Users/Francesca Abulencia/Documents/ECON 320 Lab/image.png)
+
+```{r b, echo=F}
+  writeLines("
+.main-container {
+    max-width: 100% !important;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+body{ /* Normal  */
+      font-size: 16px;
+
+h1, .h1, h2, .h2, h3, .h3 {
+    margin-top: 100px;
+}
+
+h1 {
+    padding-top: 65px !important;
+    margin-top: 30px !important;
+}
+
+pre {
+    border: 0px solid #cccccc;
+    border-radius: 0px;
+ }
+
+a {
+  color: #69b3a2;
+}",
+             con = "style.css")
+```
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+remove(list = ls())
+
+#Create myheader.html
+fileConn <- file("myheader.html")
+writeLines('<meta http-equiv="X-UA-Compatible" content="IE=edge" />', fileConn)
+close(fileConn)
+
+remotes::install_github("rstudio/bootstraplib")
+remotes::install_github("rstudio/rmarkdown#1706")
+
+library(knitrBootstrap)
+library(tidyverse)
+library(htmltools)
+library(knitr)
+library(bootstraplib)
+library(car)
+library(readxl)
+library(devtools)
+library(summarytools)
+library(hrbrthemes)
+library(gridExtra)
+library(rCharts)
+library(DT)
+library(metricsgraphics)
+library(ggplot2)
+library(gganimate)
+library(dplyr)
+library(PerformanceAnalytics)
+library(corrplot)
+library(kableExtra)
+library(plotly)
+library(janitor)
+library(stargazer)
+library(estimatr)
+library(texreg)
+library(lmtest)
+options("scipen"=100, "digits"=3)
+
+bs_theme_new(bootswatch = "minty")
+theme_bootswatch()
+```
+<br>
+
+# Purpose of the Study
+
+Women's reproductive health has been a major issue in the field of public health. The reproductive health status of women, the determinants of their health status, and the preventive strategies and programs to address women's health and well-being have been championed by advocates of this field because this public health issue has far reaching social and economic impacts. According to the World Health Association (WHO), infertility is a global public health issue that affects 10% of women.  Similarly, according to a study conducted by Bhattacharya, 17% of couples in industrialised countries seek help for infertility which may possibly be caused by ovulatory failure, tubal damage or endometriosis, or a low sperm count (Bhattacharya et al., 2010). Fortunately, reproductive medicine is resolving fertility problems with new procedures such as in vitro fertilization. Although female reproductive health is extremely important, in my opinion, more awareness should also be raised regarding male reproductive health, specifically male infertility.
+
+Most studies related to the topic of infertility has been discussed in the context of its pathophysiology. For instance, the World Health Organization largely attributes genital tract infections and sexually-transmitted diseases in human infertility. Additionally, infertile men are affected by semen infection, mainly resulting from testicular, accessory gland and urethral infections (Gimenes et al., 2014). Since a wholistic approach has been taken with regards to women's reproductive health, a similar approach should also be taken with male reproductive health.
+
+The fertility dataset looks into the effects of environmental factors and lifestyle on semen quality to determine if these factors affect the fertility rate of men. Nine variables will be explored: the season in which the analysis was performed, age at the time of analysis, childish diseases (ie , chicken pox, measles, mumps, polio), accident or serious trauma, surgical intervention, high fevers in the last year, frequency of alcohol consumption, smoking habit, number of hours spent sitting per day. The diagnosis will either result in normal (N) or altered (O).
+
+## Question
+What key lifestyle or environmental factor contributes the largest impact on male infertility?
+
+
+## Hypothesis
+A study conducted by Harris in 2011 indicated that increasing male age is related to in decreased pregnancy rates (Harris, 2011). Thus, I hypothesize that although environmental factors are important factors in male fertility, age will have the greatest effect on the output/diagnosis of male fertility.
+
+<br>
+
+# Motivating the Question 
+
+## United States Total Fertility Rates
+The time series data for the total fertility rates and the total fertility rates over the age 40 from 1933 to 2017 show that there has been a decline in female fertility rates in the United States since the 1950's. The fertility rate over the age 40 is also consistently less than the average, suggesting that age must play a factor in female fertility. I want to explore if the same trend applies to male fertility.
+
+Source: https://www.humanfertility.org/cgi-bin/country.php?country=USA
+
+```{r, warning=FALSE, fig.width=6,fig.height=1.5, fig.align='center'}
+USA_TFR <- read.csv("~/ECON 320 Lab/USAtfrRR (1).txt", sep="")
+USA_TFR <- as.data.frame(USA_TFR)
+names(USA_TFR)[names(USA_TFR) == "TFR"] <- "Total Fertility Rate"
+names(USA_TFR)[names(USA_TFR) == "TFR40"] <- "Total Fertility Rate Over the Age 40"
+
+data_long <- gather(USA_TFR, condition, measurement, "Total Fertility Rate":"Total Fertility Rate Over the Age 40", factor_key=TRUE)
+
+USA_plot <- data_long %>%
+  ggplot(aes(x=Year, y=measurement, group=condition, color=condition)) +
+    geom_line() +
+    geom_point() +
+    scale_colour_brewer(palette="Blues") +
+    ggtitle("Fertility Rates in the USA from 1933 to 2017") +
+    xlab("Year") +
+    ylab("Fertility Rate") + theme_dark()
+    
+USA_plot + transition_reveal(data_long$Year)
+```
+
+## Age-Specific Fertility Rates {.tabset}
+Data from the United Nations' Department of Economic and Social Affairs was used to represent the age-specific fertility rates in the different countries in years 1970, 1985, 1995, and 2005. Explore the interactive plots below. Bar graphs can be changed to grouped or stacked mode by clicking on the circle next to the labels.
+
+Source: https://www.un.org/en/development/desa/population/publications/dataset/fertility/data.asp
+
+### United States
+The data for United States show that fertility rates have consistently decreased for females as they transition from the cohorts
+25-29, 30-34, 35-39, 40-44, and 45-49 throughout the 4 years. Un-click the circles next to 15-19 and 20-24 to see this trend.
+
+```{r,results='asis',comment=NA, message=FALSE}
+UNPD <- read_xls("~/ECON 320 Lab/UNPD_WFD_2008_PERIOD_FERTILITY_INDICATORS.xls")
+
+UNPD <- UNPD %>%filter(`United Nations, Department of Economic and Social Affairs, Population Division. World Fertility Data 2008. (POP/DB/Fert/Rev2008)`=="United States of America")
+colnames(UNPD)<- c("Country", "ISO Code", "Year", "Period", "Total Fertility", "15-19", "20-24", "25-29", "30-34", "35-39", "40-44", "45-49", "Mean Age at Childbearing", "Source Type", "Source", "Survey Name", "Note" )
+UNPD <- UNPD %>%filter(Year!="2006") 
+
+UNPD <- as.data.frame(UNPD)
+UNPD <- subset(UNPD, select = c("Year", "15-19", "20-24", "25-29", "30-34", "35-39", "40-44", "45-49"))
+UNPD <- gather(UNPD, condition, measurement, "15-19":"45-49", factor_key=TRUE)
+UNPD$measurement <- as.numeric(UNPD$measurement)
+UNPD$measurement <- round(UNPD$measurement, 2)
+
+n1 <- nPlot(measurement ~ Year, 
+            group = 'condition', 
+            data = UNPD, 
+            type = 'multiBarChart')
+n1$xAxis(axisLabel = 'Fertility Rate')
+n1$yAxis(axisLabel = 'Year')
+
+n1$save('n2.html', standalone = TRUE)
+n1$show('iframesrc',standalone = TRUE)
+```
+
+### France
+
+In France, the data shows that fertility rates have consistently decreased for females as they transition from the cohorts
+25-29, 30-34, 35-39, 40-44, and 45-49 throughout the 4 years. This is a similar trend to the United States.  Un-click the circles next to 15-19 and 20-24 to see this trend.
+
+```{r,results='asis',comment=NA, message=FALSE}
+UNPD3 <- read_xls("~/ECON 320 Lab/UNPD_WFD_2008_PERIOD_FERTILITY_INDICATORS.xls")
+
+UNPD3 <- UNPD3 %>%filter(`United Nations, Department of Economic and Social Affairs, Population Division. World Fertility Data 2008. (POP/DB/Fert/Rev2008)`=="France")
+colnames(UNPD3)<- c("Country", "ISO Code", "Year", "Period", "Total Fertility", "15-19", "20-24", "25-29", "30-34", "35-39", "40-44", "45-49", "Mean Age at Childbearing", "Source Type", "Source", "Survey Name", "Note" )
+UNPD3 <- UNPD3 %>%filter(Year!="2006") 
+
+UNPD3 <- as.data.frame(UNPD3)
+UNPD3 <- subset(UNPD3, select = c("Year", "15-19", "20-24", "25-29", "30-34", "35-39", "40-44", "45-49"))
+UNPD3 <- gather(UNPD3, condition, measurement, "15-19":"45-49", factor_key=TRUE)
+UNPD3$measurement <- as.numeric(UNPD3$measurement)
+UNPD3$measurement <- round(UNPD3$measurement, 2)
+
+n3 <- nPlot(measurement ~ Year, 
+            group = 'condition', 
+            data = UNPD3, 
+            type = 'multiBarChart')
+n3$xAxis(axisLabel = 'Fertility Rate')
+n3$yAxis(axisLabel = 'Year')
+
+n3$save('n3.html', standalone = TRUE)
+n3$show('iframesrc',standalone = TRUE)
+```
+### United Kingdom
+
+In the United Kingdom, the fertility rates for the cohort ages 15-19, 20-24, and 25-29 have decreased for the years that the data was collected. Additionally, the fertility rate between 30-34 and 35-39 sharply decreases in all 4 years.
+
+```{r, results= 'asis',comment = NA, cache = FALSE, message=FALSE, fig.height = 3, fig.width = 3} 
+library(slidify)
+library(slidifyLibraries)
+UNPD2 <- read_xls("~/ECON 320 Lab/UNPD_WFD_2008_PERIOD_FERTILITY_INDICATORS.xls")
+
+UNPD2 <- UNPD2 %>%filter(`United Nations, Department of Economic and Social Affairs, Population Division. World Fertility Data 2008. (POP/DB/Fert/Rev2008)`=="United Kingdom")
+colnames(UNPD2)<- c("Country", "ISO Code", "Year", "Period", "Total Fertility", "15-19", "20-24", "25-29", "30-34", "35-39", "40-44", "45-49", "Mean Age at Childbearing", "Source Type", "Source", "Survey Name", "Note" )
+UNPD2 <- UNPD2 %>%filter(Year!="2006") 
+
+UNPD2 <- as.data.frame(UNPD2)
+UNPD2 <- subset(UNPD2, select = c("Year", "15-19", "20-24", "25-29", "30-34", "35-39", "40-44", "45-49"))
+UNPD2 <- gather(UNPD2, condition, measurement, "15-19":"45-49", factor_key=TRUE)
+UNPD2$measurement <- as.numeric(UNPD2$measurement)
+UNPD2$measurement <- round(UNPD2$measurement, 2)
+
+n2 <- nPlot(measurement ~ Year, 
+            group = 'condition', 
+            data = UNPD2, 
+            type = 'multiBarChart')
+n2$xAxis(axisLabel = 'Fertility Rate')
+n2$yAxis(axisLabel = 'Year')
+
+n2$save('n2.html', standalone = TRUE)
+n2$show('iframesrc',standalone = TRUE)
+
+```
+
+# The Data Set {.tabset}
+
+## Introducing the Variables
+
+This project explores 9 explanatory variables that can potentially affect male fertility.
+Source: https://archive.ics.uci.edu/ml/datasets/Fertility
+
+Explanatory Variable |  Description |  Categories
+---------------------|--------------|---------
+ season   | season in which the analysis was performed | winter, spring, summer, fall 
+ age  | age at which the analysis was performed | [18,23], [24,29], [30-36]
+ disease   | experienced childhood disease such as chicken pox, measles, mumps, polio |  yes, no
+ trauma | experienced any physical trauma | yes, no
+ surgery |  underwent surgical intervention | yes, no
+ fever  | experienced high fevers in the last year    | less than three months ago, more than three months ago, none 
+ alcohol | frequency of alcohol consumption | several times a day, every day, several times a week, once a week, never 
+ smoking | frequency of smoking | never, occasional, daily
+ hours_sitting | number of hours spent sitting per day out of | 0-16 hours
+ output | diagnosis | normal (0), abnormal (1)
+
+## Data
+100 volunteers provide a semen sample analyzed according to the WHO 2010 criteria. The raw data is shown below.
+
+```{r}
+# Importing the Data Set
+fertility <- read.csv("C:/Users/Francesca Abulencia/Downloads/fertility_Diagnosis (1).txt", header=FALSE, stringsAsFactors = FALSE)
+fertility <- as.data.frame(fertility)
+
+# Rename column headers
+names(fertility)[names(fertility) == "V1"] <- "season"
+names(fertility)[names(fertility) == "V2"] <- "age"
+names(fertility)[names(fertility) == "V3"] <- "disease"
+names(fertility)[names(fertility) == "V4"] <- "trauma"
+names(fertility)[names(fertility) == "V5"] <- "surgery"
+names(fertility)[names(fertility) == "V6"] <- "fever"
+names(fertility)[names(fertility) == "V7"] <- "alcohol"
+names(fertility)[names(fertility) == "V8"] <- "smoking"
+names(fertility)[names(fertility) == "V9"] <- "sittinghours"
+names(fertility)[names(fertility) == "V10"] <- "output"
+
+#Data Cleaning
+fertility$season [fertility$season == "-1"] <- 'winter'
+fertility$season [fertility$season == "-0.33"] <- 'spring'
+fertility$season [fertility$season == "0.33"] <- 'summer'
+fertility$season [fertility$season == "1"] <- 'fall'
+fertility$season <- as.factor(fertility$season)
+
+fertility$age <- floor(fertility$age*36)
+fertility$age <- as.numeric(fertility$age)
+
+fertility$fever [fertility$fever == -1] <-'<3 mos.'
+fertility$fever [fertility$fever == 1] <- '> 3 mos.'
+fertility$fever [fertility$fever == 0] <- 'none'
+fertility$fever <- as.factor(fertility$fever)
+
+fertility$alcohol [fertility$alcohol == 0.2] <- 'several times a day'
+fertility$alcohol [fertility$alcohol == 0.4] <- 'every day'
+fertility$alcohol [fertility$alcohol == 0.6] <- 'several times a week'
+fertility$alcohol [fertility$alcohol == 0.8] <- 'once a week'
+fertility$alcohol [fertility$alcohol == 1.0] <- 'never'
+fertility$alcohol <- as.factor(fertility$alcohol)
+
+fertility$smoking [fertility$smoking == -1] <- 'never'
+fertility$smoking [fertility$smoking == 1] <- 'daily'
+fertility$smoking [fertility$smoking == 0] <- 'occasionally'
+fertility$smoking <- as.factor(fertility$smoking )
+
+fertility$sittinghours <- floor(fertility$sittinghours*16)
+fertility$sittinghours <- as.numeric(fertility$sittinghours)
+
+fertility$disease <- as.logical(fertility$disease)
+fertility$trauma <- as.logical(fertility$trauma)
+fertility$surgery <- as.logical(fertility$surgery)
+
+fertility$output [fertility$output == "N"] <- 'Normal'
+fertility$output [fertility$output == "O"] <- 'Abnormal'
+
+datatable(fertility, options = list(pageLength = 5))
+```
+
+# Summary & Key Trends of the Data
+
+```{r, fig.align='center',plain.ascii = FALSE}
+print(dfSummary(fertility, graph.magnif = 0.75), method = 'render')
+```
+
+```{r, fig.width=10,fig.height=2, fig.align='center'}
+p1 <- ggplot(fertility, aes(x=output,  y=age, fill=as.factor(output)))+
+  geom_boxplot()+ labs(title="Age Distribution by Output") +
+   theme(plot.title = element_text(hjust = 0.5))+ylab("Age") + xlab("Output")+  theme(plot.title = element_text(hjust = 0.5)) +  scale_fill_brewer(palette="Blues")+  theme_minimal() +  theme(axis.text.x = element_text(angle = 45, hjust = 1)) + labs(fill = "Output")
+
+p4 <- ggplot(fertility, aes(x=output,  y=sittinghours, fill=as.factor(output)))+
+  geom_boxplot()+ labs(title="Sitting Hours Distribution by Output") +
+   theme(plot.title = element_text(hjust = 0.5))+ylab("Hours") + xlab("Output")+  theme(plot.title = element_text(hjust = 0.5)) +  scale_fill_brewer(palette="Blues")+  theme_minimal() +  theme(axis.text.x = element_text(angle = 45, hjust = 1)) + labs(fill = "Output")
+
+p2 <- fertility %>% group_by(output, smoking) %>% ggplot(mapping = aes(x=smoking, y=..count..)) + geom_bar(aes(fill=as.factor(output)), position="dodge",color="black")+  ylab("Number of Males") + xlab("Smoking Habits")+  theme(plot.title = element_text(hjust = 0.5)) + ggtitle("Smoking vs Output") +  scale_fill_brewer(palette="Blues")+  theme_minimal() + theme(axis.text.x = element_text(angle = 45, hjust = 1))+ labs(fill = "Output")
+
+p3 <- fertility %>% group_by(output, alcohol) %>% ggplot(mapping = aes(x=alcohol, y=..count..)) + geom_bar(aes(fill=as.factor(output)), position="dodge",color="black")+  ylab("Number of Males") + xlab("Alcohol Consumption")+  theme(plot.title = element_text(hjust = 0.5)) + ggtitle("Alcohol vs Output") +  scale_fill_brewer(palette="Blues")+ theme_minimal() + theme(plot.title = element_text(hjust = 0.5))+ theme(axis.text.x = element_text(angle = 45, hjust = 1))+ labs(fill = "Output")
+
+p5 <- fertility %>% group_by(output, trauma) %>% ggplot(mapping = aes(x=trauma, y=..count..)) + geom_bar(aes(fill=as.factor(output)), position="dodge",color="black")+  ylab("Number of Males") + xlab("Experienced Trauma")+  theme(plot.title = element_text(hjust = 0.5)) + ggtitle("Trauma vs Output") +  scale_fill_brewer(palette="Blues")+  theme_minimal() + theme(plot.title = element_text(hjust = 0.5))+ theme(axis.text.x = element_text(angle = 45, hjust = 1))+ labs(fill = "Output")
+
+p6 <- fertility %>% group_by(output, disease) %>% ggplot(mapping = aes(x=disease, y=..count..)) + geom_bar(aes(fill=as.factor(output)), position="dodge",color="black")+  ylab("Number of Males") + xlab("Experienced Childhood Disease")+  theme(plot.title = element_text(hjust = 0.5)) + ggtitle("Childhood Disease vs Output") +  scale_fill_brewer(palette="Blues")+  theme_minimal() + theme(plot.title = element_text(hjust = 0.5))+ theme(axis.text.x = element_text(angle = 45, hjust = 1))+ labs(fill = "Output")
+
+p7 <- fertility %>% group_by(output, surgery) %>% ggplot(mapping = aes(x=surgery, y=..count..)) + geom_bar(aes(fill=as.factor(output)), position="dodge",color="black")+  ylab("Number of Males") + xlab("Underwent Surgery")+  theme(plot.title = element_text(hjust = 0.5)) + ggtitle("Surgery vs Output") +  scale_fill_brewer(palette="Blues")+  theme_minimal() + theme(plot.title = element_text(hjust = 0.5))+ theme(axis.text.x = element_text(angle = 45, hjust = 1))+ labs(fill = "Output")
+
+p8 <- fertility %>% group_by(output, fever) %>% ggplot(mapping = aes(x=fever, y=..count..)) + geom_bar(aes(fill=as.factor(output)), position="dodge",color="black")+  ylab("Number of Males") + xlab("High Fever in the Past Year")+  theme(plot.title = element_text(hjust = 0.5)) + ggtitle("High Fever vs Output") +  scale_fill_brewer(palette="Blues")+  theme_minimal() + theme(plot.title = element_text(hjust = 0.5))+ theme(axis.text.x = element_text(angle = 45, hjust = 1))+ labs(fill = "Output")
+
+p9 <- fertility %>% group_by(output, season) %>% ggplot(mapping = aes(x=season, y=..count..)) + geom_bar(aes(fill=as.factor(output)), position="dodge",color="black")+  ylab("Number of Males") + xlab("Season when the Test was Conducted")+  theme(plot.title = element_text(hjust = 0.5)) + ggtitle("Season vs Output") +  scale_fill_brewer(palette="Blues")+  theme_minimal() + theme(plot.title = element_text(hjust = 0.5))+ theme(axis.text.x = element_text(angle = 45, hjust = 1))+ labs(fill = "Output")
+
+grid.arrange(p1, p4, p9, ncol=3)
+```
+
+Out of 100 observations, the average age for all the males in the sample is `r floor(mean(fertility$age))`.  There are 88 normal male fertility diagnoses and 12 abnormal male fertility diagnoses.  The average age for the males with normal fertility is 23 and the average age for the males with abnormal diagnoses is 25.  This suggests that an older age is correlated with an abnormal diagnoses. Similarly, the average number hours spent sitting down per day by males with normal fertility is 6.31 hours as opposed to 6.5 hours for males with abnormal diagnoses. The most amount abnormal diagnoses was made in the fall season while the least amount of abnormal diagnoses was made in the winter season.
+
+```{r, fig.width=10,fig.height=2, fig.align='center'}
+grid.arrange(p2, p3, p5, ncol=3) 
+```
+As for lifestyle habits, 56 males in the sample have never smoked a cigarette before. Surprisingly, however, 18 males are daily smokers and 20 males are occasional smokers and both of those groups have a normal diagnosis for male fertility. In terms of alcohol consumption, 40 males have never consumed alcohol and 38 of those have a normal diagnosis for male fertility. The highest number of males with an abnormal diagnosis drinks alcohol once a week. In terms of physical trauma, 56 males have suffered from a form of trauma but 47 of those males have a normal diagnosis. It doesn't seem like physical trauma is a large factor affecting male fertility.
+
+```{r, fig.width=10,fig.height=2, fig.align='center'}
+grid.arrange(p6, p7, p8, ncol=3)
+```
+
+Medically, 87 of the males have experienced some kind of childhood disease such as chickenpox or measles but 77 of those males have a normal diagnosis. Childhood disease might not be a good determinant of male infertility. In terms of surgery, there is an equal amount (44 males) who had and had not undergone surgery but have a normal diagnosis. Surgical intervention may also not play a big factor in contributing to male infertility. Lastly, in terms of fever, 63 males did not experience any fevers in the past year but the highest amount of males who received have an abnormal diagnosis (8 males) falls in this category. It might be unlikely that high fevers in the past year is also a strong contributor to male infertility.
+
+## Correlation Plot Between the Continuous and Binary Categorical Variables
+```{r, fig.align='center'}
+# Convert variables into numeric for data analysis
+fertility$output [fertility$output == "Normal"] <- 0
+fertility$output [fertility$output == "Abnormal"] <- 1
+fertility$output <- as.numeric(fertility$output)
+fertility$disease <- as.numeric(fertility$disease)
+fertility$trauma <- as.numeric(fertility$trauma)
+fertility$surgery <- as.numeric(fertility$surgery)
+
+corrplot.data <- fertility %>% select("age", "sittinghours", "disease", "trauma", "surgery" ) %>% cor()
+corrplot(corrplot.data, order = "hclust", method = "color", 
+    type = "upper", addCoef.col = "maroon",   tl.col="black", tl.srt=45)
+```
+
+# Regression Analysis
+
+A logistic regression model might be more useful for interpreting the data because the dependent variable (output) is a binary categorical variable. The results of the regression analysis using the **glm()** instead of the **lm()** function and specifying **'family=binomial'** in its argument can determine the log "odds" of normal to abnormal fertility for every one unit change in the dependent variable being explored.
+
+## Predicting Effect of Age on Output Using Logistic Regression 
+By using the **predict()** function on male fertility output based on age, we see that age alone is not a good predictor of abnormal male fertility diagnosis.
+```{r, fig.align='center', fig.height=5, fig.width=5}
+pred1 <- glm(output~age, data = fertility, family = binomial)
+xvalues <- seq(18, 36, 0.1)
+yvalues <- predict(pred1, list(age = xvalues),type="response")
+plot(fertility$age, fertility$output, xlab = "Age", ylab = "Output (0 = Abnormal / 1 = Normal)", main = "Predicting Output based on Age")
+lines(xvalues,yvalues)
+dat <- data.frame(output = predict(pred1), age = fertility$age)
+```
+
+## Logistic Regression Models for Continuous and Binary Variables
+
+**Model 1:**
+
+The first model is the regression of the variables *age*, *disease*, *trauma*, *surgery*, and *sittinghours* on the output/diagnosis of male fertility. In this model, there are no dummy variables present.
+
+$$output = \beta_0 + \beta_1 * age +  \beta_2 * disease +  \beta_3 * trauma +  \beta_4 * surgery  +  \beta_5 * sittinghours + u$$
+
+**Model 2:**
+
+In the second model, we interact the *disease* variable with *age*, *trauma*, *surgery*, and *sittinghours*. Essentially, we are asking the question, "What is the effect of the variables below on male fertility if a male has experience a childhood disease?" I am especially interested to know, by experiencing a childhood disease, how age affects male fertility.
+
+
+$$output = \beta_0 + \beta_1 * age*disease +  \beta_2 * trauma*disease +  \beta_3 * surgery*disease  +  \beta_4 * sittinghours*disease + u$$
+
+**Model 3:**
+
+In the third model, we interact the *trauma* variable with *age*, *disease*, *surgery*, and *sittinghours*. Essentially, we are asking the question, "What is the effect of the variables below on male fertility if a male has experienced physical trauma?" I am especially interested to know, by experiencing physical trauma, how age affects male fertility.
+
+
+$$output = \beta_0 + \beta_1 * age*trauma +  \beta_2 * disease*trauma +  \beta_3 * surgery*trauma  +  \beta_4 * sittinghours*trauma + u$$
+
+**Model 4:**
+
+In the fourth model, we interact the *surgery* variable with *age*, *disease*, *trauma*, and *sittinghours*. Essentially, we are asking the question, "What is the effect of the variables below on male fertility if a male has undergone any kind of surgery?" I am especially interested to know, by receiving surgery, how age affects male fertility.
+
+
+$$output = \beta_0 + \beta_1 * age*surgery +  \beta_2 * disease*surgery +  \beta_3 * trauma*surgery +  \beta_4 * sittinghours*surgery + u$$
+```{r, results='asis', fig.align='center', message=FALSE, warning=FALSE}
+#fertility$disease <- as.logical(fertility$disease)
+#fertility$trauma <- as.numeric(fertility$trauma)
+#fertility$surgery <- as.numeric(fertility$surgery)
+logregression.m1 <- glm(output ~ age + disease + trauma + surgery + sittinghours, data=fertility, family = binomial)
+
+#regression.m2 is the interaction of disease with other variables
+logregression.m2 <- glm(output ~ age*disease + trauma*disease + surgery*disease + sittinghours*disease, data=fertility, family = binomial)
+
+#regression.m3 is the interaction of trauma with other variables
+logregression.m3 <- glm(output ~ age*trauma + disease*trauma + surgery*trauma + sittinghours*trauma, data=fertility, family = binomial)
+
+
+#regression.m4 is the interaction of surgery with other variables
+logregression.m4 <- glm(output ~ age*surgery + disease*surgery + trauma*surgery + sittinghours*surgery, data=fertility,family = binomial)
+
+stargazer(logregression.m1, logregression.m2, logregression.m3, logregression.m4, column.sep.width= "1pt", covariate.labels = c("Age", "Disease", "Trauma", "Surgery", "Hours Sitting/Day", "Age : Disease", "Disease : Trauma", "Disease : Surgery", "Disease : Hours Sitting/Day", "Age : Trauma", "Trauma : Disease", "Trauma: Surgery", "Trauma : Hours Sitting/Day", "Age : Surgery", "Surgery : Disease", "Surgery : Trauma", "Surgery: Hours Sitting/Day"), column.labels = c("Model 1", "Model 2", "Model 3", "Model 4"),type = "html")
+```
+
+### Interpretation {.tabset}
+
+#### Model 1
+
+In the original model, we look at the effects of *age*, *disease*, *trauma*, *surgery*, and *number of hours sitting per day*. The results of the regression show that:
+
++ a 1 year increase in *age* increases the log chance of getting an abnormal diagnosis for male fertility by 0.139 and this has a p-value of less than 0.1
+
++ having experienced a childhood *disease* decreases the log chance of getting an abnormal diagnosis for male fertility by 0.068However, this result is not statistically significant.
+
++ having experienced a physical *trauma* decreases the log chance of getting an abnormal diagnosis for male fertility by 1.326 and this has a p-value of less than 0.1
+
++ having some type of *surgery* done increases the log chance of getting an abnormal diagnosis for male fertility by 0.266. However, this result is not statistically significant.
+
++ a 1 hour increase in number of *hours spent sitting per day* increases the log chance of getting an abnormal diagnosis for male fertility by 0.121. However, this result is not statistically significant.
+
+#### Model 2
+
+In the second model, we look at the interaction effects of *disease* with *age*, *trauma*, *surgery*, and *number of hours sitting per day*. The results of the regression show that:
+
++ Compared to the effect of age on the log chance of having an abnormal diagnosis for male fertility, which is 10.020, by experiencing a childhood disease, the effect of age goes down by 9.885. However, this result is not statistically significant.
+
++ Compared to the effect of trauma on the log chance of having an abnormal diagnosis for male fertility, which is -89.500, by experiencing a childhood disease, the effect of trauma goes up by 88.360. However, this result is not statistically significant.
+
++ Compared to the effect of surgery on the log chance of having an abnormal diagnosis for male fertility, which is 66.780, by experiencing a childhood disease, the effect of surgery goes down by 66.860. However, this result is not statistically significant.
+
++ Compared to the effect of the number of hours siitng per day on the log chance of having an abnormal diagnosis for male fertility, which is 8.781, by experiencing a childhood disease, the effect goes down by 8.656. However, this result is not statistically significant.
+
+#### Model 3
+In the second model, we look at the interaction effects of *trauma* with *age*, *disease*, *surgery*, and *number of hours sitting per day*. The results of the regression show that:
+
++ Compared to the effect of age on the log chance of having an abnormal diagnosis for male fertility, which is 0.182, by experiencing a physical trauma, the effect of age goes down by -0.117; this result is statistically significant with a significance level of 0.1
+
++ Compared to the effect of childhood disease on the log chance of having an abnormal diagnosis for male fertility, which is -0.503, by experiencing a physical trauma, the effect of disease goes up by 1.224. However, this result is not statistically significant.
+
++ Compared to the effect of surgery on the log chance of having an abnormal diagnosis for male fertility, which is 1.426, by experiencing a physical trauma, the effect of surgery goes down by 18.890. However, this result is not statistically significant.
+
++ Compared to the effect of the number of hours sitting per day on the log chance of having an abnormal diagnosis for male fertility, which is -0.011, by experiencing a physical trauma, the effect of the number of hours sitting per day goes up by 0.222. However, this result is not statistically significant.
+
+#### Model 4
+In the second model, we look at the interaction effects of *surgery* with *age*, *disease*, *trauma*, and *number of hours sitting per day*. The results of the regression show that:
+
++ Compared to the effect of the age on the log chance of having an abnormal diagnosis for male fertility, which is 0.093, by undergoing a surgery, the effect of age goes up by 0.131. However, this result is not statistically significant.
+
++ Compared to the effect of the disease on the log chance of having an abnormal diagnosis for male fertility, which is 17.220, by undergoing a surgery, the effect of disease goes down by 18.200. However, this result is not statistically significant.
+
++ Compared to the effect of the trauma on the log chance of having an abnormal diagnosis for male fertility, which is 0.588, by undergoing a surgery, the effect of trauma goes down by 19.630. However, this result is not statistically significant.
+
++ Compared to the effect of the number of hours sitting per day on the log chance of having an abnormal diagnosis for male fertility, which is 0.051, by undergoing a surgery, the effect of the  number of hours sitting per day goes up by 0.152. However, this result is not statistically significant.
+
+## Logistic Regression Models for Variables with More than Two Categories (Using Factor Variables)
+
+**Model 5:**
+
+In the fifth model, the variable *smoking* will be added in the regression model. Since smoking has 3 categories (never, occasionally, daily), it will be used as a factor variable. The reference category is *never*.
+
+$$output = \beta_0 + \beta_1 * age +  \beta_2 * disease +  \beta_3 * trauma +  \beta_4 * surgery  +  \beta_5 * sittinghours + \beta_6* smoking_{never} + \beta_7* smoking_{occasionally}+ \beta_8* smoking_{daily}+ u$$
+
+**Model 6:**
+
+In the sixth model, the variable *alcohol* will be added in the regression model. Since alcohol has 4 categories (never, once a week, several times a week, every day), it will be used as a factor variable. The reference category is *never*.
+
+$$output = \beta_0 + \beta_1 * age +  \beta_2 * disease +  \beta_3 * trauma +  \beta_4 * surgery  +  \beta_5 * sittinghours + \beta_6* alcohol_{never} + \beta_7* alcohol_{once/week}+\beta_8* alcohol_{severaltimes/week} + \beta_9* alcohol_{everyday}+u$$
+
+**Model 7:**
+
+In the seventh model, the variable *fever* will be added in the regression model. Since fever has 3 categories (none, < 3 months, and > 3 months), it will be used as a factor variable.  The reference category is.
+
+$$output = \beta_0 + \beta_1 * age +  \beta_2 * disease +  \beta_3 * trauma +  \beta_4 * surgery  +  \beta_5 * sittinghours + \beta_6* fever_{none} + \beta_7* fever_{< 3months}+ \beta_8* fever_{>3months}+ u$$
+
+**Model 8:**
+
+In the eighth model, the variable *season* will be added in the regression model. Since season has 4 categories (fall, spring, summer, winter), it will be used as a factor variable.  The reference category is *fall*.
+
+$$output = \beta_0 + \beta_1 * age +  \beta_2 * disease +  \beta_3 * trauma +  \beta_4 * surgery  +  \beta_5 * sittinghours + \beta_6* season_{fall} + \beta_7* season_{spring}+ \beta_8* season_{summer}+\beta_9* season_{winter}+ u$$
+
+```{r, results='asis', fig.align='center', message=FALSE}
+logregression.m5 <- glm(output ~ age + disease + trauma + surgery + sittinghours + smoking, data=fertility, family = binomial)
+logregression.m6 <- glm(output ~ age + disease + trauma + surgery + sittinghours + alcohol, data=fertility, family = binomial)
+logregression.m7 <- glm(output ~ age + disease + trauma + surgery + sittinghours + fever, data=fertility, family = binomial)
+logregression.m8 <- glm(output ~ age + disease + trauma + surgery + sittinghours + season, data=fertility, family = binomial)
+
+stargazer(logregression.m5, logregression.m6, logregression.m7, logregression.m8, column.sep.width= "1pt", covariate.labels = c("Age", "Disease", "Trauma", "Surgery", "Hours Sitting/Day", "Smoking Daily", "Smoking Occasionally", "Drinking Alchol Every Day", "Drinking Alcohol Once a Week", "Drinking Alcohol Several Times a Day", "Drinking Alcohol Several Times a Week", "Fever < 3 Months", "Fever > 3 Months", "Spring Season", "Summer Season", "Winter Season"), column.labels = c("Model 5", "Model 6", "Model 7", "Model 8") ,type = "html")
+```
+
+### Interpretation {.tabset}
+
+#### Model 5
++ Compared to males who never smoked before, the log chance of having an abnormal diagnosis for male fertility for males who smoke daily is lower by 0.538. However, this result is not statistically significant. For males who smoke occasionally, it is lower by 0.386. However, both results are not statistically significant.
+
+#### Model 6
++ Compared to males who have never consumed alcohol before, the log chance of having an abnormal diagnosis for male fertility for males who drink alcohol every day is higher by 12.380. For males who drink alcohol once a week, it is higher by 13.980, and for males who drink alcohol several times a day, it is lower by 1.116. All three results are not statistically significant.
+
+#### Model 7
++ Compared to males who have never experienced high fevers in the past year, the log chance of having an abnormal diagnosis for male fertility for males who experienced a fever less than 3 months ago is lower by 2.017. For males who experienced a fever more than 3 months ago, it is lower by 1.126. However, these results are not statistically significant.
+
+#### Model 8
++ Compared to the exams performed in the fall, the log chance of having an abnormal diagnosis for male fertility for the exams done in the spring is lower by 0.562. For the exams done in the summer, it is higher by 0.142. These two results are not statistically significant.
+
++ Compared to the exams performed in the fall, the log chance of having an abnormal diagnosis for male fertility for the exams done in the winter is lower by 2.026. This result is statistically significant with a p-value of less than 0.1
+
+# Adjusting for Heteroskedasticity {.tabset}
+The results of the regression analysis for the original eight models and their heteroskedasticty-adjusted counterparts are displayed in the stargzer tables below. See both tabs.
+
+## Logistic Regression for Continuous and Binary Variables
+```{r, results='asis', fig.align='center', message=FALSE}
+regrob1 <- coeftest(logregression.m1, vcov = hccm)
+regrob2 <-coeftest(logregression.m2, vcov = hccm)
+regrob3 <-coeftest(logregression.m3, vcov = hccm)
+regrob4 <-coeftest(logregression.m4, vcov = hccm)
+
+stargazer(list(logregression.m1,regrob1,logregression.m2,regrob2,logregression.m3,regrob3,logregression.m4,regrob4), type = "html", star.cutoffs = c(0.1,0.05,0.01), dep.var.labels = "Output",column.labels = c("Model 1", "Model 1 (Robust)","Model 2", "Model 2 (Robust)","Model 3", "Model 3 (Robust)","Model 4", "Model 4 (Robust)"), covariate.labels = c("Age", "Disease", "Trauma", "Surgery", "Hours Sitting/Day", "Age : Disease", "Disease : Trauma", "Disease : Surgery", "Disease : Hours Sitting/Day", "Age : Trauma", "Trauma : Disease", "Trauma: Surgery", "Trauma : Hours Sitting/Day", "Age : Surgery", "Surgery : Disease", "Surgery : Trauma", "Surgery: Hours Sitting/Day"))
+```
+
+## Logistic Regression Using Dummy Variables
+
+```{r, results='asis', fig.align='center'}
+logregrob5 <-coeftest(logregression.m5, vcov = hccm)
+logregrob6 <-coeftest(logregression.m6, vcov = hccm)
+logregrob7 <-coeftest(logregression.m7, vcov = hccm)
+logregrob8 <-coeftest(logregression.m8, vcov = hccm)
+
+stargazer(list(logregression.m5,logregrob5,logregression.m6,logregrob6,logregression.m7,logregrob7,logregression.m8,logregrob8), type = "html", star.cutoffs = c(0.1,0.05,0.01), dep.var.labels = "Output",column.labels = c("Model 5", "Model 5 (Robust)","Model 6", "Model 6 (Robust)","Model 7", "Model 7 (Robust)","Model 8", "Model 8 (Robust)"), covariate.labels = c("Age", "Disease", "Trauma", "Surgery", "Hours Sitting/Day", "Smoking Daily", "Smoking Occasionally", "Drinking Alchol Every Day", "Drinking Alcohol Once a Week", "Drinking Alcohol Several Times a Day", "Drinking Alcohol Several Times a Week", "Fever < 3 Months", "Fever > 3 Months", "Spring Season", "Summer Season", "Winter Season"))
+```
+
+## Results of Heteroskedasticity Adjustment
+
+Based on the results of the stargazer tables above, adjusting for heteroskedasticity does not change the beta values for each variable. However, some of the standard errors are altered after the adjustment, which affects the significance of some results.
+
+# Inference Testing {.tabset}
+For our first model:
+$$output = \beta_0 + \beta_1 * age +  \beta_2 * disease +  \beta_3 * trauma +  \beta_4 * surgery  +  \beta_5 * sittinghours + u$$
+the categorical variables **disease** and **surgery** had coefficients that were not statistically significant. By running a combined test, we can determine whether the group considered as a whole is statistically significant or not. Sometimes coefficients may be insignificant when considered individually, but significant when considered as a group.
+
+Given the presence of categorical variables in our regression models, a **Chi-square Test** will be conducted instead of an F-Test to test for the joint significance of the variables. We first test the joint significance of all the variables. Since a logistic regression was conducted above, the stargazer table does not provide any information about the joint significance of all the variables together.
+
+## Chi-square Test for the Joint Significance of Age, Disease, Trauma, Surgery, and Sitting Hours
+Null Hypothesis: $$H_0:\beta_{1(age)} = \beta_{2(disease)} = \beta_{3(trauma)}= \beta_{4(sugery)}= \beta_{5(sittinghours)}=0$$
+```{r}
+res.ur.1 <- glm(output ~ age + disease + trauma + surgery + sittinghours, data=fertility, family = binomial)
+myH0 <- c("age", "disease", "trauma", "surgery", "sittinghours")
+linearHypothesis(res.ur.1, myH0)
+```
+
+**After running a Chi-square test for the joint significance of all the variables, the result is a Chi-square value of 5 and a p value of 0.42. Since this p value is greater than 0.05, the results are *not statistically significant*. This means that we *fail to reject the null hypothesis* that all the variables are not jointly significant.**
+
+
+## Chi-square Test for Joint Significance of Surgery and Disease
+Null Hypothesis:
+$$H_0: \beta_{2(disease)} = \beta_{4(sugery)}=0$$
+
+```{r}
+# Restricted OLS regression:
+res.r.1 <- glm(output ~ age + trauma  + sittinghours, data=fertility, family = binomial)
+
+myH0 <- c("surgery", "disease")
+linearHypothesis(res.ur.1, myH0, white.adjust = "hc1")
+```
+
+**After running a Chi-square test for the joint significance of the variables *surgery* and *disease*, the result is a Chi-square value of 0.18 and a p value of 0.91. Since this p value is greater than 0.05, the results are *not statistically significant*. This means that we *fail to reject the null hypothesis* that the variables *surgery* and *disease* are not jointly significant.**
+
+## Chi-square Test for the Joint Significance of Disease and Trauma
+Null Hypothesis:
+
+$$H_0:\beta_{2(disease)} = \beta_{3(trauma)}=0$$
+```{r}
+res.ur.2 <- glm(output ~ age + disease + trauma + surgery + sittinghours, data=fertility, family = binomial)
+
+# Restricted OLS regression:
+res.r.2 <- glm(output ~ age + surgery + sittinghours, data=fertility, family = binomial)
+myH0 <- c("disease", "trauma")
+linearHypothesis(res.ur.2, myH0,white.adjust = "hc1")
+```
+
+**After running a Chi-square test for the joint significance of the variables *disease* and *trauma*, the result is a Chi-square value of 3.14 and a p value of 0.21. Since this p value is greater than 0.05, the results are *not statistically significant*. This means that we *fail to reject the null hypothesis* that the variables *disease* and *trauma* are not jointly significant.**
+
+## Chi-square Test for the Joint Significance of Trauma and Surgery
+Null Hypothesis:
+$$H_0: = \beta_{3(trauma)}= \beta_{4(sugery)}=0$$
+```{r}
+res.ur.3 <- glm(output ~ age + disease + trauma + surgery + sittinghours, data=fertility, family = binomial)
+
+# Restricted OLS regression:
+res.r.3 <- glm(output ~ age + disease + sittinghours, data=fertility, family = binomial)
+myH0 <- c("surgery", "trauma")
+linearHypothesis(res.ur.3, myH0, white.adjust = "hc1")
+```
+
+**After running a Chi-square test for the joint significance of the variables *disease* and *trauma*, the result is a Chi-square value of 3.16 and a p value of 0.21. Since this p value is greater than 0.05, the results are *not statistically significant*. This means that we *fail to reject the null hypothesis* that the variables *disease* and *trauma* are not jointly significant.**
+
+# Conclusion
+Based on the regression and inference tests ran above, only the variables age and trauma show a statistically significant effect on the diagnosis for male fertility with a significance level of 0.1. With the same significance level of 0.1, results also suggest that compared to the exams conducted in the fall, the log chance of having an abnormal diagnosis for male fertility for the exams done in the winter is lower by 2.026. Although seasons may not seem like it could play a role in male fertility, past research has looked into the seasonal changes in sperm production and fertility, which could be linked to factors ranging from temperature, to length of daylight exposure (Levitas et.al, 2013). This research from the American Journal of Obstetrics and Gynecology also concurs with the finding that human sperm are generally at their healthiest in winter. This is an interesting finding because many people may think that male fertility may be related to their genetics or their physiology. But sometimes, there are other non-medical factors like seasons that are also beyond people's control that affect their health. People should be more conscious about the impact of environmental factors on their health and well-being. To explore this further in the future, a larger sample size might be helpful in establishing a stronger and more statistically significant relationship between male fertility and the variables explored from the data set.
+```{r, out.width = "1000px", fig.align='center'}
+knitr::include_graphics("C:/Users/Francesca Abulencia/Downloads/journal.PNG")
+```
+
+# References
+Bhattacharya, S., Johnson, N., Tijani, H. A., Hart, R., Pandey, S., & Gibreel, A. F. (2010). Female infertility. BMJ clinical evidence, 2010, 0819.
+
+Gimenes, F., Souza, R., Bento, J. et al. Male infertility: a public health issue caused by sexually transmitted pathogens. Nat Rev Urol 11, 672–687 (2014). https://doi.org/10.1038/nrurol.2014.285 
+
+Harris, I. D., Fronczak, C., Roth, L., & Meacham, R. B. (2011). Fertility and the aging male. Reviews in urology, 13(4), e184–e190.
+
+Levitas E., Lunenfeld E., Weisz N., et al. Seasonal variations of human sperm cells among 6455 semen samples: a plausible explanation of a seasonal birth pattern. Am J Obstet Gynecol 2013;208:406.e1-6.

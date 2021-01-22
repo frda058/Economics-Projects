@@ -1,0 +1,438 @@
+---
+title: "Assessing the Impacts of Citizenship and Socioeconomic Status on Parent-Child Interactions"
+author: "Francesca Abulencia"
+date: "12/09/2019"
+output: 
+      rmdformats::readthedown:
+        code_folding: hide
+        theme: flatly
+        toc_depth: 6
+        toc_float: FALSE
+        smooth_scroll: FALSE
+        
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(ggplot2)
+library(gganimate)
+library(dplyr)
+library(kableExtra)
+library(plotly)
+library(janitor)
+options("scipen"=100, "digits"=4)
+
+```
+
+![](C:/Users/Francesca Abulencia/Downloads/GettyImages-1132448431.jpg)
+
+# Purpose Of The Study
+  The influx of immigrants entering the United States can be largely attributed, among other reasons, to the desire for economic, religious, or political freedom. Personally, as an immigrant from the Philippines, our family’s migration was driven by the potential upward socioeconomic mobility that could be fulfilled by higher-paying jobs in the United States. The culture shock experienced during the transition to a new country can be an agent for establishing closer family ties as a means to preserve one’s cultural identity. Because of this, the transition to college – an environment away from family – could prompt an immigrant student to keep frequent contact with his/her parents. However, for immigrant families, the pursuit to improve their socioeconomic status could demand longer work hours, which could negatively affect the family dynamic and reduce parent-child interactions. According Roubinov and Boyce, **"parenting is strongly influenced by and situated within the larger social ecology in which it unfolds, including the socioeconomic context." (Roubinov and Boyce, 2018)**
+  
+  A study conducted in 1999 determined that **“jobs decrease parental free time available to the adolescent, and workplace stress may spill over into family life. (Baer, 1999)”**
+
+  This study aims to look at the relationship between citizenship status and family cohesion and determine if socioeconomic status influences this relationship. The motivation for this study stems from my personal experience as my parents have instilled the importance of retaining cultural and family values. I want to explore if other students with immigrant backgrounds maintain strong family ties in college, or if they exhibit more independence away from family. Lastly, I want to explore if immigrant families are sacrificing their relationships with their children by continuously pursuing economic gains.
+
+  I hypothesize that college students with immigrant backgrounds maintain more frequent contact with their families than their non-immigrant counterparts. However, I also predict that immigrant families with higher socioeconomic status will experience diminishing frequency of contact from their children.
+
+
+![](C:/Users/Francesca Abulencia/Downloads/Teaching_Tolerance_immigration_013_0.jpg)
+
+
+# The Data Set
+  Data was collected from all ECON 220L Sections. 116 people responded to a series of questionnaires. For this specific study, the respondent's **Citizenship Status**, **Gross Annual Income**, and the **Call Time (Mins/Week)** spent on talking to the student's family on the phone.
+  
+## Explanation of Groups
+  The sample will be divided into 3 groups: **Immigrants**, **U.S. Born Citizens**, and **International Students**.
+Based on the responses, starting from *Question 23*:Are you born in the US?, the answer **TRUE** refers to U.S. Born Citizens. If the answer is **FALSE**, then look at *Question 18*:Are you an international student?. The answer **TRUE** refers to international students. The answer **FALSE** refers to immigrant/foreign-born students. A data frame will be created based on these 3 categorical values.
+
+```{r,  warning=FALSE}
+# Loading dataset into R
+load("~/ECON 220 Lab/Econ220DataF2019_ano.Rdata")
+
+#Rename document
+Prodata<- Econ220DataF2019_ano
+
+# Data Cleanup: Question 23
+# Are you born in the US?
+
+
+# Data Cleanup: Question 18
+# Are you an international student?
+
+
+# Data Cleanup: Question 19
+# How many minutes per week do you talk to your family on the phone?
+Prodata$q19[Prodata$q19=="30 min"]<-30
+Prodata$q19[Prodata$q19=="210 minutes"]<-210
+Prodata$q19[Prodata$q19=="60 minutes"]<-60
+Prodata$q19[Prodata$q19=="30min"]<-30
+Prodata$q19 <- as.numeric(Prodata$q19,na.rm = TRUE)
+Prodata$q19[Prodata$q19 == 1000.0]<-NA
+
+# Data Cleanup: Question 232
+# What do you think is your annual gross household income?
+Prodata$q232[Prodata$q232=="20"]<-20000
+Prodata$q232[Prodata$q232=="$500000"]<-500000
+Prodata$q232[Prodata$q232=="10k"]<-10000
+Prodata$q232[Prodata$q232=="$200000"]<-200000
+Prodata$q232[Prodata$q232=="10k"]<-10000
+Prodata$q232[Prodata$q232=="n/a"]<-NA
+Prodata$q232[Prodata$q232=="don't know"]<-NA
+Prodata$q232[Prodata$q232=="80,000$"]<-80000
+Prodata$q232[Prodata$q232=="middle"]<-NA
+Prodata$q232[Prodata$q232=="1000000 dollars"]<-1000000
+Prodata$q232[Prodata$q232=="I dont know"]<-NA
+Prodata$q232[Prodata$q232=="0"]<-NA
+Prodata$q232[Prodata$q232=="$48,000"]<-48000
+Prodata$q232[Prodata$q232 == 100] <- 100000
+Prodata$q232 <- as.numeric(Prodata$q232,na.rm = TRUE)
+
+
+#Creating Data Frame Based on Citizenship Status
+DataFrame <- data.frame("Race"=Prodata$race, "Sex"=Prodata$sex, "U.S Born"=Prodata$q23, "International Student"=Prodata$q18, "Call Minutes/Week"=Prodata$q19, "Gross Annual Income"=Prodata$q232)
+
+DataFrame$Sex <- as.factor(DataFrame$Sex)
+DataFrame$Race <- as.factor(DataFrame$Race)
+
+USborn <- subset(DataFrame, U.S.Born == TRUE,  select = c("Race","Sex","Call.Minutes.Week","Gross.Annual.Income"))
+USborn$Citizenship <- "U.S. Born"
+
+International <- subset(DataFrame, International.Student == TRUE, select = c("Race","Sex","Call.Minutes.Week","Gross.Annual.Income"))
+International$Citizenship <- "International"
+
+Immigrant <- subset(DataFrame,U.S.Born == FALSE & International.Student == FALSE, select = c("Race","Sex","Call.Minutes.Week","Gross.Annual.Income"))
+Immigrant$Citizenship <- "Immigrant"
+
+
+citizenshipdf <- rbind(USborn, International, Immigrant)
+citizenshipdf2<- citizenshipdf[c("Race", "Sex", "Citizenship","Call.Minutes.Week", "Gross.Annual.Income")]
+
+colnames(citizenshipdf2)<- c("Race", "Sex", "Citizenship", "Call Time (Mins/Week)", "Gross Annual Income")
+
+citizenshipdf2$`Call Time (Mins/Week)`<- as.numeric(citizenshipdf2$`Call Time (Mins/Week)`)
+citizenshipdf2$`Gross Annual Income` <- as.numeric(citizenshipdf2$`Gross Annual Income`)
+```
+
+### Proportion Table by Citizenship Status
+The table below shows the number of students in each citizenship category given that the a response was given for **each** of the questions being explored in the study. The sample size decreased because some respondents did not want to disclose their family's Gross Annual Income.
+
+```{r}
+popnoNA<-subset(citizenshipdf2,!is.na(citizenshipdf2$'Gross Annual Income' & citizenshipdf2$'Call Time (Mins/Week)'))
+
+pt<-tabyl(popnoNA$Citizenship, sort = TRUE)
+colnames(pt)<- c("Citizenship Status", "Frequency (n=65)","%")
+kable(pt,align="c") %>% kable_styling("striped", "bordered")
+```
+
+
+## Creating Summary Statistics (Raw Values) {.tabset}
+A table of important summary statistics for the Gross Annual Income and Call Time was created to observe general trends by Citizenship Status. These values contain the raw data reported and **does not** exclude any outliers. Open the tabs to learn more.
+
+```{r,  warning=FALSE}
+summtab<- citizenshipdf2 %>% select(Citizenship, `Call Time (Mins/Week)`, `Gross Annual Income`) %>% na.omit() %>% group_by(Citizenship)  %>% summarise_all(funs(mean, min, quantile(., 0.25) , median, quantile(., 0.75), max), na.rm=TRUE)
+
+
+colnames(summtab) <- c("Citizenship", "Mean Call Time (Min/Week)", "Mean Gross Annual Income", "Min Call Time (Min/Week)", "Min Gross Annual Income", "Q1 Call Time (Min/Week)", "Q1 Gross Annual Income", "Median Call Time (Min/Week)", "Median Gross Annual Income", "Q3 Call Time (Min/Week)", "Q3 Gross Annual Income", "Max Call Time (Min/Week)", "Max Gross Annual Income")
+
+df_transpose = t(summtab)
+colnames(df_transpose) <- df_transpose[1, ]
+df_transpose <- df_transpose[-1, ]
+```
+
+
+
+### By Call Time (Min/Week)
+```{r}
+
+l1<-c("Mean Call Time (Min/Week)", "Min Call Time (Min/Week)", "Q1 Call Time (Min/Week)", "Median Call Time (Min/Week)", "Q3 Call Time (Min/Week)", "Max Call Time (Min/Week)")
+kab1<-subset(df_transpose, rownames(df_transpose) %in% l1)
+row.names(kab1)<- c("Mean", "Min", "Q1", "Median","Q3", "Max")
+kable(kab1,align="c") %>% kable_styling("striped", "bordered") %>% add_header_above(c("", "Citizenship Status" = 3))
+
+```
+
+### By Gross Annual Income
+```{r}
+l2<-c("Mean Gross Annual Income", "Min Gross Annual Income", "Q1 Gross Annual Income", "Median Gross Annual Income", "Q3 Gross Annual Income" , "Max Gross Annual Income")
+kab1<-subset(df_transpose, rownames(df_transpose) %in% l2)
+row.names(kab1)<- c("Mean", "Min", "Q1","Median","Q3", "Max")
+kable(kab1,align="c") %>% kable_styling("striped", "bordered") %>% add_header_above(c("", "Citizenship Status" = 3))
+```
+
+# Data Analysis
+After reviewing the raw data, outliers were removed to establish clearer trends within the data set. The distribution of Gross Annual Income and Call Time for different citizenship status were each visualized through **box plots** and **histograms**. A **scatterplot** mapping the 3 variables aforementioned shows if there are any positive or negative trends associated with the data.
+
+```{r}
+immigrant_subset<-subset(popnoNA, Citizenship=="Immigrant")
+USBorn_subset<-subset(popnoNA, Citizenship=="U.S. Born")
+international_subset<-subset(popnoNA, Citizenship=="International")
+
+# Removing Outliers based on 1.5IQR rule
+popnoNA$`Gross Annual Income`[popnoNA$`Gross Annual Income` == 6000000]<- NA
+popnoNA$`Gross Annual Income`[popnoNA$`Gross Annual Income` == 1000000]<- NA
+popnoNA$`Gross Annual Income`[popnoNA$`Gross Annual Income` == 1500000]<- NA
+popnoNA$`Gross Annual Income`[popnoNA$`Gross Annual Income` == 700000]<- NA
+popnoNA$`Gross Annual Income`[popnoNA$`Gross Annual Income` == 600000]<- NA
+immigrant_subset$`Gross Annual Income`[immigrant_subset$`Gross Annual Income` == 6000000]<- NA
+immigrant_subset$`Gross Annual Income`[immigrant_subset$`Gross Annual Income` == 1000000]<- NA
+international_subset$`Gross Annual Income`[international_subset$`Gross Annual Income` == 1000000]<- NA
+international_subset$`Gross Annual Income`[international_subset$`Gross Annual Income` == 1500000]<- NA
+international_subset$`Gross Annual Income`[international_subset$`Gross Annual Income` == 700000]<- NA
+USBorn_subset$`Gross Annual Income`[USBorn_subset$`Gross Annual Income` == 700000]<- NA
+USBorn_subset$`Gross Annual Income`[USBorn_subset$`Gross Annual Income` == 500000]<- NA
+USBorn_subset$`Gross Annual Income`[USBorn_subset$`Gross Annual Income` == 450000]<- NA
+popnoNA$`Call Time (Mins/Week)`[popnoNA$`Call Time (Mins/Week)` == 240]<- NA
+popnoNA$`Call Time (Mins/Week)`[popnoNA$`Call Time (Mins/Week)` == 100]<- NA
+popnoNA$`Call Time (Mins/Week)`[popnoNA$`Call Time (Mins/Week)` == 600]<- NA
+popnoNA$`Call Time (Mins/Week)`[popnoNA$`Call Time (Mins/Week)` == 140]<- NA
+USBorn_subset$`Call Time (Mins/Week)`[USBorn_subset$`Call Time (Mins/Week)` == 600] <- NA
+international_subset$`Call Time (Mins/Week)`[international_subset$`Call Time (Mins/Week)` == 600] <- NA
+```
+
+## Income Distribution by Citizenship Status 
+
+### Boxplot of Income Distribution 
+```{r,  warning=FALSE}
+bp1<- ggplot(data=popnoNA, aes(x=Citizenship,  y=`Gross Annual Income` , fill=Citizenship))+
+  geom_boxplot( alpha=0.5)+
+labs(title="Gross Annual Income in U.S. Dollars") +
+   theme(plot.title = element_text(hjust = 0.5)) + scale_fill_manual(values=c("violetred4","pink4", "lightcoral"))
+
+ggplotly(bp1)
+```
+
+
+### Histogram of Income Distribution {.tabset}
+Open the tabs below to see the Gross Annual Income Distribution for each Citizenship status.
+
+#### Immigrant
+```{r}
+
+dist_imm <- immigrant_subset %>% select(`Gross Annual Income`) %>%  na.omit() %>% ggplot(mapping=aes(x= `Gross Annual Income`)) +
+  geom_histogram(aes(y =..density.., fill=..count..), breaks=seq(0, 500000, by = 50000), position= "identity", alpha=0.6, binwidth=0.1)  + geom_density(col="red4", alpha=0.2) + ggtitle("Income Distribution for Immigrant Students") + scale_fill_continuous(low="palevioletred1", high="red4")
+
+ggplotly(dist_imm)
+
+
+```
+
+#### International
+```{r}
+dist_int <- international_subset %>% select(`Gross Annual Income`) %>%  na.omit() %>% ggplot(mapping=aes(x= `Gross Annual Income`)) +
+  geom_histogram(aes(y =..density.., fill=..count..), breaks=seq(-1, 500000, by = 50000), position= "identity", alpha=0.6, binwidth=0.1)  + geom_density(col="red4", alpha=0.2) + ggtitle("Income Distribution for International Students") + scale_fill_continuous(low="palevioletred1", high="red4")
+
+ggplotly(dist_int)
+```
+
+#### U.S. Born
+```{r}
+dist_usb <- USBorn_subset %>% select(`Gross Annual Income`) %>%  na.omit() %>% ggplot(mapping=aes(x= `Gross Annual Income`)) +
+  geom_histogram(aes(y =..density.., fill=..count..), breaks=seq(0, 400000, by = 50000), position= "identity", alpha=0.6, binwidth=0.1)  + geom_density(col="red4", alpha=0.2) + ggtitle("Income Distribution for U.S. Born Students") + scale_fill_continuous(low="palevioletred1", high="red4")
+ggplotly(dist_usb)
+```
+
+## Call Time Distribution by Citizenship Status
+
+### Boxplot of Call Time Distribution
+```{r,  warning=FALSE}
+bp<-ggplot(data=popnoNA, aes(x=Citizenship,  y=`Call Time (Mins/Week)` , fill=Citizenship))+
+  geom_boxplot( alpha=0.5)+
+labs(title="Call Time per Week in Minutes") +
+   theme(plot.title = element_text(hjust = 0.5)) + scale_fill_manual(values=c("violetred4","pink4", "lightcoral"))
+ggplotly(bp)
+```
+
+### Histogram of Call Time Distribution {.tabset}
+Open the tabs below to see the Call Time Income Distribution for each Citizenship status.
+
+#### Immigrant
+```{r}
+dist_imm1 <- immigrant_subset %>% select(`Call Time (Mins/Week)`) %>%  na.omit() %>% ggplot(mapping=aes(x= `Call Time (Mins/Week)`)) +
+  geom_histogram(aes(y =..density.., fill=..count..), breaks=seq(0, 100, by = 20), position= "identity", alpha=0.6, binwidth=0.1)  + geom_density(col="red4", alpha=0.2) + ggtitle("Call Time Distribution for Immigrant Students") + scale_fill_continuous(low="palevioletred1", high="red4")
+ggplotly(dist_imm1)
+```
+
+#### International
+```{r}
+dist_int1 <- international_subset %>% select(`Call Time (Mins/Week)`) %>%  na.omit() %>% ggplot(mapping=aes(x= `Call Time (Mins/Week)`)) +
+  geom_histogram(aes(y =..density.., fill=..count..), breaks=seq(0, 120, by = 20), position= "identity", alpha=0.6, binwidth=0.1)  + geom_density(col="red4", alpha=0.2) + ggtitle("Call Time Distribution for International Students") + scale_fill_continuous(low="palevioletred1", high="red4")
+ggplotly(dist_int1)
+```
+
+#### U.S. Born
+```{r}
+dist_usb1 <- USBorn_subset %>% select(`Call Time (Mins/Week)`) %>%  na.omit() %>% ggplot(mapping=aes(x= `Call Time (Mins/Week)`)) +
+  geom_histogram(aes(y =..density.., fill=..count..), breaks=seq(0, 120, by = 20), position= "identity", alpha=0.6, binwidth=0.1)  + geom_density(col="red4", alpha=0.2) + ggtitle("Call Time Distribution for U.S. Born Students") + scale_fill_continuous(low="palevioletred1", high="red4")
+ggplotly(dist_usb1)
+```
+
+## Finding Correlation Using a Scatterplot
+```{r, warning= FALSE}
+ggplot(data=popnoNA, mapping=aes(`Call Time (Mins/Week)`, `Gross Annual Income`, color=Citizenship)) +
+  geom_point(alpha=0.5)+ scale_color_manual(values=c("violetred4","pink4", "lightcoral")) + 
+  geom_smooth(method='lm') + ylim(0,600000) + labs(title="Gross Annual Income vs. Call Time") +  theme(plot.title = element_text(hjust = 0.5))
+
+```
+
+### Standard Deviation, Variance of Gross Annual Income and Call Time
+```{r}
+corvals <- popnoNA %>%  group_by(`Citizenship`) %>% na.omit %>% summarise(`Standard Deviation: Gross Annual Income` =sd(`Gross Annual Income`), `Standard Deviation: Call Time` =sd(`Call Time (Mins/Week)`),  `Variance: Gross Annual Income` = var(`Gross Annual Income`), `Variance: Call Time`= var(`Call Time (Mins/Week)`))
+
+kable(corvals,align="c") %>%  kable_styling("striped", "bordered")
+```
+
+### Correlation Coefficient and Covariance of Gross Annual Income and Call Time
+
+```{r}
+corvals1 <- popnoNA %>%  group_by(`Citizenship`) %>% na.omit %>% summarise(`Correlation Coefficient`=cor(`Call Time (Mins/Week)`, `Gross Annual Income`), `Covariance`= cov(`Call Time (Mins/Week)`, `Gross Annual Income`))
+
+kable(corvals1,align="c") %>%  kable_styling("striped", "bordered") 
+```
+
+
+
+## Average Income and Call Time (Excluding Outliers)
+The Average Gross Annual Income and Call Times were modeled in a **stacked bar graph** with Citizenship Status in the x-axis and Thousands of Dollars / Minutes in the y-axis. The data shows that *as the average income decreases, the average call time increases with citizenship status*. 
+
+```{r}
+AvgValnoOutlier <- popnoNA %>% select(Citizenship, `Call Time (Mins/Week)`, `Gross Annual Income`) %>% na.omit() %>% group_by(Citizenship) %>% summarise(`Average Call Time (Mins/Week)`=round(mean(`Call Time (Mins/Week)`)), `Average Gross Annual Income` = round(mean(`Gross Annual Income`)))
+
+AvgValnoOutlier$`Average Gross Annual Income`<-AvgValnoOutlier$`Average Gross Annual Income` / 1000
+
+Avglong <- gather(AvgValnoOutlier, condition, measurement, `Average Call Time (Mins/Week)`:`Average Gross Annual Income`, factor_key=TRUE)
+
+Avglong %>%
+  group_by(condition, Citizenship) %>%
+  ggplot(mapping=aes(x=Citizenship, y=measurement, fill=condition, label=measurement)) +
+  geom_col()+
+  geom_text(size=4, fontface=2, color="gray21", position = position_stack(vjust = 0.5))+
+  ylab("Thousands of Dollars / Minutes") + xlab("Citizenship Status")+
+  ggtitle("Average Values of Income and Call Time by Citizenship Status") +
+  theme(plot.title = element_text(hjust = 0.5)) + scale_fill_manual(values=c("pink1", "lightpink3"))
+
+```
+
+
+## T-test
+A T-test is conducted to determine the *significance* of the difference in means observed for each group being examined. Since this study looks into 3 categorical groups (Immigrant, International, U.S. Born), the T-test will be conducted to show the relationship of Gross Annual Income and Call Time (Mins/Week) on two specific citizenship groups at one time (e.g. Immigrant & International / Immigrant & U.S. Born / International & U.S. Born). Open the tabs below.
+
+```{r}
+data_test1 <- subset(popnoNA , popnoNA$Citizenship == "Immigrant" | popnoNA$Citizenship == "International")
+data_test2 <- subset(popnoNA , popnoNA$Citizenship == "Immigrant" | popnoNA$Citizenship == "U.S. Born")
+data_test3 <- subset(popnoNA , popnoNA$Citizenship == "International" | popnoNA$Citizenship == "U.S. Born")
+```
+
+### Call Time and Citizenship Status {.tabset}
+
+A p-value of greater than 0.5 indicates that we fail to reject the null hypothesis in which some difference exists between the true mean (μ) and the comparison value. For the Call Time betweeen the Immigrant & International, Immigrant & U.S. Born, and International & U.S. Born groups, the p-values are less than or equal to 0.5. There is less than a 5% probability that the null hypothesis is correct and the results are random.
+
+
+#### Immigrant & International
+```{r}
+t.test(`Call Time (Mins/Week)` ~ `Citizenship` ,data=data_test1)
+```
+
+#### Immigrant & U.S. Born
+```{r}
+t.test(`Call Time (Mins/Week)` ~ `Citizenship` ,data=data_test2)
+```
+
+#### International & U.S. Born
+```{r}
+t.test(`Call Time (Mins/Week)` ~ `Citizenship` ,data=data_test3)
+```
+
+
+
+### Gross Annual Income and Citizenship Status {.tabset}
+A p-value of greater than 0.5 indicates that we fail to reject the null hypothesis in which some difference exists between the true mean (μ) and the comparison value. For the Gross Annual Income betweeen Immigrant & International, Immigrant & U.S. Born, and International & U.S. Born groups, the p-values are greater than 0.5. This means we fail to reject the null hypothesis and cannot accept the alternative hypothesis. 
+
+
+#### Immigrant & International
+```{r}
+t.test(`Gross Annual Income` ~ `Citizenship` ,data=data_test1)
+```
+
+#### Immigrant & U.S. Born
+```{r}
+t.test(`Gross Annual Income` ~ `Citizenship` ,data=data_test2)
+```
+
+#### International & U.S. Born
+```{r}
+t.test(`Gross Annual Income` ~ `Citizenship` ,data=data_test3)
+```
+
+
+
+
+# Conclusion
+
+Based on the data above, on average, U.S. Born students have the lowest average Gross Annual Income while Immigrant students have the highest average Gross Annual Income. In contrast, U.S. Born students have the largest average call time and Immigrants have the lowest average call time.
+
+
+Additionally, according to the results of the scatterplot and the values for the correlation coefficient, Immigrant Students had the largest positive correlation (0.7217) between Call Time (Mins/Week) and Gross Annual Income. In other words, a rise in the immigrant student's family Gross Annual Income is correlated to a longer time spent by that student talking to his/her parents on the phone, which could be an indicator of stronger parent-child interactions. This finding does not support my hypothesis as I claimed that a higher paying job could indicate longer work hours and reduced time to foster parent-child interactions. It is possible that cultural effects are in play and stronger bonds are formed in immigrant families, regardless of the pursuit for higher socioeconomic status.
+
+
+Conversely, international students had the lowest positive correlation (0.1191) between Call Time (Mins/Week) and Gross Annual Income. This means that the increase in Gross Annual Income does not greatly affect the length of an international student's call time. Since the international student group had the lowest average call time, it is possible that this value is not related to their parent's income but is due to other factors such as the availability of long-distance calls or time difference between the United States and their home countries that would limit the times available for calling.
+
+
+U.S. Born students were in the middle in terms of the positive correlation (0.2736) between Call Time and Gross Annual Income. However, this correlation coefficient is still low which could indicate that Call Time - and parent-child interactions, are not directly determined by the U.S. Born student's income. This group actually had the largest average Call Time within the 3 groups, and thus a stronger parent-child relationship could be due to other factors such as being able to grow up under the constant supervision of parents (e.g. no separation occured with the families, as opposed to the experiences of international students and possibly the immigrant students as well). In general, trends in parent-child interactions are challenging to generalize due to the various unique life experiences, parenting styles, and different upbringings that individuals face on a case-by-case basis.
+
+
+## Shortcomings of the Study
+
+* **Sample Size**
+  + The original sample size of 116 students was reduced to 65 students because respondents refused to report their Gross Annual Income or Call Time. Additionally, large outlier values were also excluded on this study, further reducing the sample size.
+
+
+* **One Mode of Communication**
+  + This study only examines the minutes spent by students talking to their parents on the phone. Other modes of communication such as instant messaging (e.g. WeChat), social media interactions (e.g. Facebook), and video messanging (e.g. Skype) were not taken into account.
+
+
+* **Unequal Sample Size in Each Citizenship Group**
+  + There was a greater sample of Immigrant students (n=35) compared to Immigrant students (n=10), which can contribute to an inaccurate generation of trends. Sample size should be equal across all groups.
+  
+  
+* **Did Not Take Into Account the Strength of Parent-Child Interactions Prior to University**
+  + It is difficult to conclude if reduced parent-child Interactions during college is attributed to a student's busy schedule or if the weak interactions were already established prior to a student entering a university.
+  
+  
+* **Did Not Take Into Account the Number of Years Already Spent Living in the United States for Immigrant Students**
+  + It is possible that the strength of parent-child interactions will vary based on the number of years that a student has already lived in the Unites States. For instance, parental interactions with a student who migrated to the United States when he/she was only 2 years old could be different from the interactions experienced by a student who migrated to the United States when he/she was 16 years old.
+
+
+
+## Future Directions
+*To improve this study in the future, explore:*
+
+
+* **Larger Sample Size**
+  + This will be beneficial in establishing clearer trends between the variables being examined
+  
+  
+* **Gross Annual Income and Call Time (Min/Week) of the Immigrant Students by Continent**
+  + It is possible that there are cultural impacts on family ties which could be generalized by regional. 
+  
+  
+* **Other Modes of Communication**
+  + The frequency of text messages, social media interactions, and other modes of commnication between parents and their children may also be quantified. It is possible that long-distance phone calls for International students may be costly or unavailable. 
+  
+  
+* **Parental Work Hours**
+  + The job insdutries of the sample's parents can be related to parent-child interactions, especially if certain industries require greater work hours, such as exceeding 40 hours per week or weekend and night-shift hours.
+  
+  
+* **Amount of Debt**
+  + The amount of consumer debt, loans, or mortgages can play a factor on parent-child interactions. It is possible that stress resulting from having debt can strain family relationships and reduce the hours spent on fostering stronger family interactions.
+
+![](C:/Users/Francesca Abulencia/Downloads/GettyImages-961623304.jpg)
+
+# References
+- Baer, J. "The effects of family structure and SES on family processes in early adolescence" Journal of adolescence. , 1999, Vol.22(3), p.341-354
+
+- Barrett, A., Turner, R. "Family Structure and Mental Health: The Mediating Effects of Socioeconomic Status, Family Process, and Social Stress". Journal of Health and Social Behavior, 2005, Vol. 46, Issue 2.
+
+- Roubinov, D., Boyce, T. "Parenting and SES: relative values or enduring principles?". Current Opinion in Psychology, 2017, Vol. 15, pp. 162-167.
