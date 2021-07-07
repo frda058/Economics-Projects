@@ -1,0 +1,513 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(ggplot2)
+library(xtable)
+library(data.table)
+library(Cairo)
+library(extrafont)
+library(reshape2)
+library(kableExtra)
+library(tidyr)
+library(formattable)
+library(ggpubr)
+font_import(pattern = "lmroman*")
+loadfonts()
+par(family = "LM Roman 10")
+```
+
+```{r}
+data <- readRDS("/Users/francescaabulencia/Downloads/hwk3_data-4.Rdata")
+
+#mkt share: (discharge of hospital)/(total number of discharges in that zip code)
+
+w <- data %>% group_by(zip, year)
+
+hms_zip_discharges <- data %>% group_by(zip, year,tot_discharges) %>% summarise('total discharges' = sum(tot_discharges))
+hms_zip_discharges <- data.frame(hms_zip_discharges)
+hms_zip_discharges <- hms_zip_discharges[order(as.integer(hms_zip_discharges$year), decreasing = FALSE), ]
+
+totmktshare <- aggregate(hms_zip_discharges['total.discharges'], by=hms_zip_discharges['year'], sum)
+
+hms_zip_discharges <- merge(hms_zip_discharges,totmktshare,by="year")
+hms_zip_discharges$mktshare <-hms_zip_discharges$total.discharges.x/hms_zip_discharges$total.discharges.y
+
+```
+
+```{r}
+hms_zip_discharges.1997 <- hms_zip_discharges %>% filter(year=='1997')
+hms_zip_discharges.1998 <- hms_zip_discharges %>% filter(year=='1998')
+hms_zip_discharges.1999 <- hms_zip_discharges %>% filter(year=='1999')
+hms_zip_discharges.2000 <- hms_zip_discharges %>% filter(year=='2000')
+hms_zip_discharges.2001 <- hms_zip_discharges %>% filter(year=='2001')
+hms_zip_discharges.2002 <- hms_zip_discharges %>% filter(year=='2002')
+hms_zip_discharges.2003 <- hms_zip_discharges %>% filter(year=='2003')
+hms_zip_discharges.2004 <- hms_zip_discharges %>% filter(year=='2004')
+hms_zip_discharges.2005 <- hms_zip_discharges %>% filter(year=='2005')
+hms_zip_discharges.2006 <- hms_zip_discharges %>% filter(year=='2006')
+hms_zip_discharges.2007 <- hms_zip_discharges %>% filter(year=='2007')
+hms_zip_discharges.2008 <- hms_zip_discharges %>% filter(year=='2008')
+hms_zip_discharges.2009 <- hms_zip_discharges %>% filter(year=='2009')
+hms_zip_discharges.2010 <- hms_zip_discharges %>% filter(year=='2010')
+hms_zip_discharges.2011 <- hms_zip_discharges %>% filter(year=='2011')
+hms_zip_discharges.2012 <- hms_zip_discharges %>% filter(year=='2012')
+hms_zip_discharges.2013 <- hms_zip_discharges %>% filter(year=='2013')
+hms_zip_discharges.2014 <- hms_zip_discharges %>% filter(year=='2014')
+hms_zip_discharges.2015 <- hms_zip_discharges %>% filter(year=='2015')
+hms_zip_discharges.2016 <- hms_zip_discharges %>% filter(year=='2016')
+hms_zip_discharges.2017 <- hms_zip_discharges %>% filter(year=='2017')
+hms_zip_discharges.2018 <- hms_zip_discharges %>% filter(year=='2018')
+
+
+hms_zip_discharges$year <- as.factor(hms_zip_discharges$year)
+hms_zip_discharges.1997$year <- as.factor(hms_zip_discharges.1997$year)
+vp1.1997 <- ggplot(hms_zip_discharges.1997, aes(x=year, y=mktshare)) + 
+  geom_violin(fill="darkred")
+vp1.1997 
+
+hms_zip_discharges.1998$year <- as.factor(hms_zip_discharges.1998$year)
+vp1.1998 <- ggplot(hms_zip_discharges.1998, aes(x=year, y=mktshare)) + 
+  geom_violin(fill="pink")
+vp1.1998
+
+hms_zip_discharges.1999$year <- as.factor(hms_zip_discharges.1999$year)
+vp1.1999 <- ggplot(hms_zip_discharges.1999, aes(x=year, y=mktshare)) + 
+  geom_violin(fill="violet")
+vp1.1999
+
+hms_zip_discharges.2000$year <- as.factor(hms_zip_discharges.2000$year)
+vp1.2000 <- ggplot(hms_zip_discharges.2000, aes(x=year, y=mktshare)) + 
+  geom_violin(fill="coral")
+vp1.2000
+
+hms_zip_discharges.2001$year <- as.factor(hms_zip_discharges.2001$year)
+vp1.2001 <- ggplot(hms_zip_discharges.2001, aes(x=year, y=mktshare)) + 
+  geom_violin(fill="green")
+vp1.2001
+
+
+hms_zip_discharges.2002$year <- as.factor(hms_zip_discharges.2002$year)
+vp1.2002 <- ggplot(hms_zip_discharges.2002, aes(x=year, y=mktshare)) + 
+  geom_violin(fill="forestgreen")
+vp1.2002
+
+hms_zip_discharges.2003$year <- as.factor(hms_zip_discharges.2003$year)
+vp1.2003 <- ggplot(hms_zip_discharges.2003, aes(x=year, y=mktshare)) + 
+  geom_violin(fill="darkolivegreen")
+vp1.2003
+
+hms_zip_discharges.2004$year <- as.factor(hms_zip_discharges.2004$year)
+vp1.2004 <- ggplot(hms_zip_discharges.2004, aes(x=year, y=mktshare)) + 
+  geom_violin(fill="cornflowerblue")
+vp1.2004
+
+hms_zip_discharges.2005$year <- as.factor(hms_zip_discharges.2005$year)
+vp1.2005 <- ggplot(hms_zip_discharges.2005, aes(x=year, y=mktshare)) + 
+  geom_violin(fill="blue")
+vp1.2005
+
+hms_zip_discharges.2006$year <- as.factor(hms_zip_discharges.2006$year)
+vp1.2006 <- ggplot(hms_zip_discharges.2006, aes(x=year, y=mktshare)) + 
+  geom_violin(fill="darkslategrey")
+vp1.2006
+
+hms_zip_discharges.2007$year <- as.factor(hms_zip_discharges.2007$year)
+vp1.2007 <- ggplot(hms_zip_discharges.2007, aes(x=year, y=mktshare)) + 
+  geom_violin(fill="darkblue")
+vp1.2007
+
+hms_zip_discharges.2008$year <- as.factor(hms_zip_discharges.2008$year)
+vp1.2008 <- ggplot(hms_zip_discharges.2008, aes(x=year, y=mktshare)) + 
+  geom_violin(fill="violet")
+vp1.2008
+
+hms_zip_discharges.2009$year <- as.factor(hms_zip_discharges.2009$year)
+vp1.2009 <- ggplot(hms_zip_discharges.2009, aes(x=year, y=mktshare)) + 
+  geom_violin(fill="orchid4")
+vp1.2009
+
+hms_zip_discharges.2010$year <- as.factor(hms_zip_discharges.2010$year)
+vp1.2010 <- ggplot(hms_zip_discharges.2010, aes(x=year, y=mktshare)) + 
+  geom_violin(fill="magenta")
+vp1.2010
+
+hms_zip_discharges.2011$year <- as.factor(hms_zip_discharges.2011$year)
+vp1.2011 <- ggplot(hms_zip_discharges.2011, aes(x=year, y=mktshare)) + 
+  geom_violin(fill="thistle")
+vp1.2011
+
+hms_zip_discharges.2012$year <- as.factor(hms_zip_discharges.2012$year)
+vp1.2012 <- ggplot(hms_zip_discharges.2012, aes(x=year, y=mktshare)) + 
+  geom_violin(fill="wheat3")
+vp1.2012
+
+hms_zip_discharges.2013$year <- as.factor(hms_zip_discharges.2013$year)
+vp1.2013 <- ggplot(hms_zip_discharges.2013, aes(x=year, y=mktshare)) + 
+  geom_violin(fill="darkkhaki")
+vp1.2013
+
+hms_zip_discharges.2014$year <- as.factor(hms_zip_discharges.2014$year)
+vp1.2014 <- ggplot(hms_zip_discharges.2014, aes(x=year, y=mktshare)) + 
+  geom_violin(fill="brown4")
+vp1.2014
+
+hms_zip_discharges.2015$year <- as.factor(hms_zip_discharges.2015$year)
+vp1.2015 <- ggplot(hms_zip_discharges.2015, aes(x=year, y=mktshare)) + 
+  geom_violin(fill="orange")
+vp1.2015
+
+hms_zip_discharges.2016$year <- as.factor(hms_zip_discharges.2016$year)
+vp1.2016 <- ggplot(hms_zip_discharges.2016, aes(x=year, y=mktshare)) + 
+  geom_violin(fill="lightsalmon4")
+vp1.2016
+
+
+hms_zip_discharges.2017$year <- as.factor(hms_zip_discharges.2017$year)
+vp1.2017 <- ggplot(hms_zip_discharges.2017, aes(x=year, y=mktshare)) + 
+  geom_violin(fill="moccasin")
+vp1.2017
+
+hms_zip_discharges.2018$year <- as.factor(hms_zip_discharges.2018$year)
+vp1.2018 <- ggplot(hms_zip_discharges.2018, aes(x=year, y=mktshare)) + 
+  geom_violin(fill="lightgrey")
+vp1.2018
+
+ggarrange(vp1.1997 , vp1.1998 , vp1.1999 ,vp1.2001 ,vp1.2001 ,vp1.2002 ,vp1.2003 ,
+          vp1.2004 , vp1.2005 , vp1.2006, vp1.2007, vp1.2008, vp1.2009, vp1.2010,
+          vp1.2011, vp1.2012, vp1.2013, vp1.2014, vp1.2015, vp1.2016, vp1.2017, vp1.2018,
+          heights = c(0.8,0.8,0.8,0.8,0.8,0.8,0.8,0.8,0.8,0.8,0.8,0.8,0.8,0.8,0.8,0.8,0.8,0.8,0.8,0.8,0.8,0.8),
+          ncol = 5, nrow = 5)
+```
+
+```{r}
+#HRR as market
+hms_hrr_discharges <- data %>% group_by(hrr, year) %>% summarise('total discharges' = sum(tot_discharges))
+hms_hrr_discharges <- data.frame(hms_hrr_discharges)
+hms_hrr_discharges <- hms_hrr_discharges[order(as.integer(hms_hrr_discharges$year), decreasing = FALSE), ]
+
+totmktshare_hrr <- aggregate(hms_hrr_discharges['total.discharges'], by=hms_hrr_discharges['year'], sum)
+
+hms_hrr_discharges <- merge(hms_hrr_discharges,totmktshare_hrr,by="year")
+hms_hrr_discharges$mktshare <-hms_hrr_discharges$total.discharges.x/hms_hrr_discharges$total.discharges.y
+
+```
+
+```{r}
+hms_hrr_discharges.1997 <- hms_hrr_discharges %>% filter(year=='1997')
+hms_hrr_discharges.1998 <- hms_hrr_discharges %>% filter(year=='1998')
+hms_hrr_discharges.1999 <- hms_hrr_discharges %>% filter(year=='1999')
+hms_hrr_discharges.2000 <- hms_hrr_discharges %>% filter(year=='2000')
+hms_hrr_discharges.2001 <- hms_hrr_discharges %>% filter(year=='2001')
+hms_hrr_discharges.2002 <- hms_hrr_discharges %>% filter(year=='2002')
+hms_hrr_discharges.2003 <- hms_hrr_discharges %>% filter(year=='2003')
+hms_hrr_discharges.2004 <- hms_hrr_discharges %>% filter(year=='2004')
+hms_hrr_discharges.2005 <- hms_hrr_discharges %>% filter(year=='2005')
+hms_hrr_discharges.2006 <- hms_hrr_discharges %>% filter(year=='2006')
+hms_hrr_discharges.2007 <- hms_hrr_discharges %>% filter(year=='2007')
+hms_hrr_discharges.2008 <- hms_hrr_discharges %>% filter(year=='2008')
+hms_hrr_discharges.2009 <- hms_hrr_discharges %>% filter(year=='2009')
+hms_hrr_discharges.2010 <- hms_hrr_discharges %>% filter(year=='2010')
+hms_hrr_discharges.2011 <- hms_hrr_discharges %>% filter(year=='2011')
+hms_hrr_discharges.2012 <- hms_hrr_discharges %>% filter(year=='2012')
+hms_hrr_discharges.2013 <- hms_hrr_discharges %>% filter(year=='2013')
+hms_hrr_discharges.2014 <- hms_hrr_discharges %>% filter(year=='2014')
+hms_hrr_discharges.2015 <- hms_hrr_discharges %>% filter(year=='2015')
+hms_hrr_discharges.2016 <- hms_hrr_discharges %>% filter(year=='2016')
+hms_hrr_discharges.2017 <- hms_hrr_discharges %>% filter(year=='2017')
+hms_hrr_discharges.2018 <- hms_hrr_discharges %>% filter(year=='2018')
+
+
+hms_hrr_discharges.1997$year <- as.factor(hms_hrr_discharges.1997$year)
+vp2.1997 <- ggplot(hms_hrr_discharges.1997, aes(x=year, y=mktshare)) + 
+  geom_violin(fill="darkred")
+vp2.1997 
+
+hms_hrr_discharges.1998$year <- as.factor(hms_hrr_discharges.1998$year)
+vp2.1998 <- ggplot(hms_hrr_discharges.1998, aes(x=year, y=mktshare)) + 
+  geom_violin(fill="pink")
+vp2.1998
+
+hms_hrr_discharges.1999$year <- as.factor(hms_hrr_discharges.1999$year)
+vp2.1999 <- ggplot(hms_hrr_discharges.1999, aes(x=year, y=mktshare)) + 
+  geom_violin(fill="violet")
+vp2.1999
+
+hms_hrr_discharges.2000$year <- as.factor(hms_hrr_discharges.2000$year)
+vp2.2000 <- ggplot(hms_hrr_discharges.2000, aes(x=year, y=mktshare)) + 
+  geom_violin(fill="coral")
+vp2.2000
+
+hms_hrr_discharges.2001$year <- as.factor(hms_hrr_discharges.2001$year)
+vp2.2001 <- ggplot(hms_hrr_discharges.2001, aes(x=year, y=mktshare)) + 
+  geom_violin(fill="green")
+vp2.2001
+
+hms_hrr_discharges.2002$year <- as.factor(hms_hrr_discharges.2002$year)
+vp2.2002 <- ggplot(hms_hrr_discharges.2002, aes(x=year, y=mktshare)) + 
+  geom_violin(fill="forestgreen")
+vp2.2002
+
+hms_hrr_discharges.2003$year <- as.factor(hms_hrr_discharges.2003$year)
+vp2.2003 <- ggplot(hms_hrr_discharges.2003, aes(x=year, y=mktshare)) + 
+  geom_violin(fill="darkolivegreen")
+vp2.2003
+
+hms_hrr_discharges.2004$year <- as.factor(hms_hrr_discharges.2004$year)
+vp2.2004 <- ggplot(hms_hrr_discharges.2004, aes(x=year, y=mktshare)) + 
+  geom_violin(fill="cornflowerblue")
+vp2.2004
+
+hms_hrr_discharges.2005$year <- as.factor(hms_hrr_discharges.2005$year)
+vp2.2005 <- ggplot(hms_hrr_discharges.2005, aes(x=year, y=mktshare)) + 
+  geom_violin(fill="blue")
+vp2.2005
+
+hms_hrr_discharges.2006$year <- as.factor(hms_hrr_discharges.2006$year)
+vp2.2006 <- ggplot(hms_hrr_discharges.2006, aes(x=year, y=mktshare)) + 
+  geom_violin(fill="darkslategrey")
+vp2.2006
+
+hms_hrr_discharges.2007$year <- as.factor(hms_hrr_discharges.2007$year)
+vp2.2007 <- ggplot(hms_hrr_discharges.2007, aes(x=year, y=mktshare)) + 
+  geom_violin(fill="darkblue")
+vp2.2007
+
+hms_hrr_discharges.2008$year <- as.factor(hms_hrr_discharges.2008$year)
+vp2.2008 <- ggplot(hms_hrr_discharges.2008, aes(x=year, y=mktshare)) + 
+  geom_violin(fill="violet")
+vp2.2008
+
+hms_hrr_discharges.2009$year <- as.factor(hms_hrr_discharges.2009$year)
+vp2.2009 <- ggplot(hms_hrr_discharges.2009, aes(x=year, y=mktshare)) + 
+  geom_violin(fill="orchid4")
+
+hms_hrr_discharges.2010$year <- as.factor(hms_hrr_discharges.2010$year)
+vp2.2010 <- ggplot(hms_hrr_discharges.2010, aes(x=year, y=mktshare)) + 
+  geom_violin(fill="magenta")
+
+hms_hrr_discharges.2011$year <- as.factor(hms_hrr_discharges.2011$year)
+vp2.2011 <- ggplot(hms_hrr_discharges.2011, aes(x=year, y=mktshare)) + 
+  geom_violin(fill="thistle")
+
+hms_hrr_discharges.2012$year <- as.factor(hms_hrr_discharges.2012$year)
+vp2.2012 <- ggplot(hms_hrr_discharges.2012, aes(x=year, y=mktshare)) + 
+  geom_violin(fill="wheat3")
+
+hms_hrr_discharges.2013$year <- as.factor(hms_hrr_discharges.2013$year)
+vp2.2013 <- ggplot(hms_hrr_discharges.2013, aes(x=year, y=mktshare)) + 
+  geom_violin(fill="darkkhaki")
+
+hms_hrr_discharges.2014$year <- as.factor(hms_hrr_discharges.2014$year)
+vp2.2014 <- ggplot(hms_hrr_discharges.2014, aes(x=year, y=mktshare)) + 
+  geom_violin(fill="brown4")
+
+hms_hrr_discharges.2015$year <- as.factor(hms_hrr_discharges.2015$year)
+vp2.2015 <- ggplot(hms_hrr_discharges.2015, aes(x=year, y=mktshare)) + 
+  geom_violin(fill="orange")
+
+hms_hrr_discharges.2016$year <- as.factor(hms_hrr_discharges.2016$year)
+vp2.2016 <- ggplot(hms_hrr_discharges.2016, aes(x=year, y=mktshare)) + 
+  geom_violin(fill="lightsalmon4")
+
+hms_hrr_discharges.2017$year <- as.factor(hms_hrr_discharges.2017$year)
+vp2.2017 <- ggplot(hms_hrr_discharges.2017, aes(x=year, y=mktshare)) + 
+  geom_violin(fill="moccasin")
+
+hms_hrr_discharges.2018$year <- as.factor(hms_hrr_discharges.2018$year)
+vp2.2018 <- ggplot(hms_hrr_discharges.2018, aes(x=year, y=mktshare)) + 
+  geom_violin(fill="lightgrey")
+
+
+ggarrange(vp2.1997 , vp2.1998 , vp2.1999 ,vp2.2001 ,vp2.2001 ,vp2.2002 ,vp2.2003 ,
+          vp2.2004 , vp2.2005 , vp2.2006, vp2.2007, vp2.2008, vp2.2009, vp2.2010,
+          vp2.2011 , vp2.2012 , vp2.2013, vp2.2014, vp2.2015, vp2.2016, vp2.2017, vp2.2018,
+          heights = c(0.8,0.8,0.8,0.8,0.8,0.8,0.8,0.8,0.8,0.8,0.8,0.8,0.8,0.8,0.8,0.8,0.8,0.8,0.8,0.8,0.8,0.8),
+          ncol = 5, nrow = 5)
+```
+
+```{r}
+#HRR as market
+hms_mkt_discharges <- data %>% group_by(mkt, year) %>% summarise('total discharges' = sum(tot_discharges))
+hms_mkt_discharges <- data.frame(hms_mkt_discharges)
+hms_mkt_discharges <- hms_mkt_discharges[order(as.integer(hms_mkt_discharges$year), decreasing = FALSE), ]
+
+totmktshare_mkt <- aggregate(hms_mkt_discharges['total.discharges'], by=hms_mkt_discharges['year'], sum)
+
+hms_mkt_discharges <- merge(hms_mkt_discharges,totmktshare_mkt,by="year")
+hms_mkt_discharges$mktshare <-hms_mkt_discharges$total.discharges.x/hms_mkt_discharges$total.discharges.y
+
+```
+
+```{r}
+hms_mkt_discharges.1997 <- hms_mkt_discharges %>% filter(year=='1997')
+hms_mkt_discharges.1998 <- hms_mkt_discharges %>% filter(year=='1998')
+hms_mkt_discharges.1999 <- hms_mkt_discharges %>% filter(year=='1999')
+hms_mkt_discharges.2000 <- hms_mkt_discharges %>% filter(year=='2000')
+hms_mkt_discharges.2001 <- hms_mkt_discharges %>% filter(year=='2001')
+hms_mkt_discharges.2002 <- hms_mkt_discharges %>% filter(year=='2002')
+hms_mkt_discharges.2003 <- hms_mkt_discharges %>% filter(year=='2003')
+hms_mkt_discharges.2004 <- hms_mkt_discharges %>% filter(year=='2004')
+hms_mkt_discharges.2005 <- hms_mkt_discharges %>% filter(year=='2005')
+hms_mkt_discharges.2006 <- hms_mkt_discharges %>% filter(year=='2006')
+hms_mkt_discharges.2007 <- hms_mkt_discharges %>% filter(year=='2007')
+hms_mkt_discharges.2008 <- hms_mkt_discharges %>% filter(year=='2008')
+hms_mkt_discharges.2009 <- hms_mkt_discharges %>% filter(year=='2009')
+hms_mkt_discharges.2010 <- hms_mkt_discharges %>% filter(year=='2010')
+hms_mkt_discharges.2011 <- hms_mkt_discharges %>% filter(year=='2011')
+hms_mkt_discharges.2012 <- hms_mkt_discharges %>% filter(year=='2012')
+hms_mkt_discharges.2013 <- hms_mkt_discharges %>% filter(year=='2013')
+hms_mkt_discharges.2014 <- hms_mkt_discharges %>% filter(year=='2014')
+hms_mkt_discharges.2015 <- hms_mkt_discharges %>% filter(year=='2015')
+hms_mkt_discharges.2016 <- hms_mkt_discharges %>% filter(year=='2016')
+hms_mkt_discharges.2017 <- hms_mkt_discharges %>% filter(year=='2017')
+hms_mkt_discharges.2018 <- hms_mkt_discharges %>% filter(year=='2018')
+
+hms_mkt_discharges.1997$year <- as.factor(hms_mkt_discharges.1997$year)
+vp3.1997 <- ggplot(hms_mkt_discharges.1997, aes(x=year, y=mktshare)) + 
+  geom_violin(fill="darkred")
+vp3.1997 
+
+hms_mkt_discharges.1998$year <- as.factor(hms_mkt_discharges.1998$year)
+vp3.1998 <- ggplot(hms_mkt_discharges.1998, aes(x=year, y=mktshare)) + 
+  geom_violin(fill="pink")
+vp3.1998
+
+hms_mkt_discharges.1999$year <- as.factor(hms_mkt_discharges.1999$year)
+vp3.1999 <- ggplot(hms_mkt_discharges.1999, aes(x=year, y=mktshare)) + 
+  geom_violin(fill="violet")
+vp3.1999
+
+hms_mkt_discharges.2000$year <- as.factor(hms_mkt_discharges.2000$year)
+vp3.2000 <- ggplot(hms_mkt_discharges.2000, aes(x=year, y=mktshare)) + 
+  geom_violin(fill="coral")
+vp3.2000
+
+hms_mkt_discharges.2001$year <- as.factor(hms_mkt_discharges.2001$year)
+vp3.2001 <- ggplot(hms_mkt_discharges.2001, aes(x=year, y=mktshare)) + 
+  geom_violin(fill="green")
+vp3.2001
+
+hms_mkt_discharges.2002$year <- as.factor(hms_mkt_discharges.2002$year)
+vp3.2002 <- ggplot(hms_mkt_discharges.2002, aes(x=year, y=mktshare)) + 
+  geom_violin(fill="forestgreen")
+vp3.2002
+
+hms_mkt_discharges.2003$year <- as.factor(hms_mkt_discharges.2003$year)
+vp3.2003 <- ggplot(hms_mkt_discharges.2003, aes(x=year, y=mktshare)) + 
+  geom_violin(fill="darkolivegreen")
+vp3.2003
+
+hms_mkt_discharges.2004$year <- as.factor(hms_mkt_discharges.2004$year)
+vp3.2004 <- ggplot(hms_mkt_discharges.2004, aes(x=year, y=mktshare)) + 
+  geom_violin(fill="cornflowerblue")
+vp3.2004
+
+hms_mkt_discharges.2005$year <- as.factor(hms_mkt_discharges.2005$year)
+vp3.2005 <- ggplot(hms_mkt_discharges.2005, aes(x=year, y=mktshare)) + 
+  geom_violin(fill="blue")
+vp3.2005
+
+hms_mkt_discharges.2006$year <- as.factor(hms_mkt_discharges.2006$year)
+vp3.2006 <- ggplot(hms_mkt_discharges.2006, aes(x=year, y=mktshare)) + 
+  geom_violin(fill="darkslategrey")
+vp3.2006
+
+hms_mkt_discharges.2007$year <- as.factor(hms_mkt_discharges.2007$year)
+vp3.2007 <- ggplot(hms_mkt_discharges.2007, aes(x=year, y=mktshare)) + 
+  geom_violin(fill="darkblue")
+vp3.2007
+
+hms_mkt_discharges.2008$year <- as.factor(hms_mkt_discharges.2008$year)
+vp3.2008 <- ggplot(hms_mkt_discharges.2008, aes(x=year, y=mktshare)) + 
+  geom_violin(fill="violet")
+vp3.2008
+
+hms_mkt_discharges.2009$year <- as.factor(hms_mkt_discharges.2009$year)
+vp3.2009 <- ggplot(hms_mkt_discharges.2009, aes(x=year, y=mktshare)) + 
+  geom_violin(fill="orchid4")
+
+hms_mkt_discharges.2010$year <- as.factor(hms_mkt_discharges.2010$year)
+vp3.2010 <- ggplot(hms_mkt_discharges.2010, aes(x=year, y=mktshare)) + 
+  geom_violin(fill="magenta")
+
+hms_mkt_discharges.2011$year <- as.factor(hms_mkt_discharges.2011$year)
+vp3.2011 <- ggplot(hms_mkt_discharges.2011, aes(x=year, y=mktshare)) + 
+  geom_violin(fill="thistle")
+
+hms_mkt_discharges.2012$year <- as.factor(hms_mkt_discharges.2012$year)
+vp3.2012 <- ggplot(hms_mkt_discharges.2012, aes(x=year, y=mktshare)) + 
+  geom_violin(fill="wheat3")
+
+hms_mkt_discharges.2013$year <- as.factor(hms_mkt_discharges.2013$year)
+vp3.2013 <- ggplot(hms_mkt_discharges.2013, aes(x=year, y=mktshare)) + 
+  geom_violin(fill="darkkhaki")
+
+hms_mkt_discharges.2014$year <- as.factor(hms_mkt_discharges.2014$year)
+vp3.2014 <- ggplot(hms_mkt_discharges.2014, aes(x=year, y=mktshare)) + 
+  geom_violin(fill="brown4")
+
+hms_mkt_discharges.2015$year <- as.factor(hms_mkt_discharges.2015$year)
+vp3.2015 <- ggplot(hms_mkt_discharges.2015, aes(x=year, y=mktshare)) + 
+  geom_violin(fill="orange")
+
+hms_mkt_discharges.2016$year <- as.factor(hms_mkt_discharges.2016$year)
+vp3.2016 <- ggplot(hms_mkt_discharges.2016, aes(x=year, y=mktshare)) + 
+  geom_violin(fill="lightsalmon4")
+
+hms_mkt_discharges.2017$year <- as.factor(hms_mkt_discharges.2017$year)
+vp3.2017 <- ggplot(hms_mkt_discharges.2017, aes(x=year, y=mktshare)) + 
+  geom_violin(fill="moccasin")
+
+hms_mkt_discharges.2018$year <- as.factor(hms_mkt_discharges.2018$year)
+vp3.2018 <- ggplot(hms_mkt_discharges.2018, aes(x=year, y=mktshare)) + 
+  geom_violin(fill="lightgrey")
+vp3.2018
+
+ggarrange(vp3.1997 , vp3.1998 , vp3.1999 ,vp3.2001 ,vp3.2001, vp3.2002, vp3.2003 ,
+          vp3.2004 , vp3.2005 , vp3.2006, vp3.2007, vp3.2008, vp3.2009, vp3.2010,
+          vp3.2011 , vp3.2012 , vp3.2013, vp3.2014, vp3.2015, vp3.2016, vp3.2017, vp3.2018,
+          heights = c(0.8,0.8,0.8,0.8,0.8,0.8,0.8,0.8,0.8,0.8,0.8,0.8,0.8,0.8,0.8,0.8,0.8,0.8,0.8,0.8,0.8,0.8),
+          ncol = 5, nrow = 5)
+```
+
+```{r}
+#avg mkt shares over time
+
+avg_hrr <- hms_hrr_discharges %>% group_by(year) %>%
+  summarize(avg = mean(totmktshare))
+avg_hrr <- as.data.frame(avg_hrr)
+
+avg_mkt <- hms_mkt_discharges %>% group_by(year) %>%
+  summarize(avg = mean(mktshare))
+avg_mkt <- as.data.frame(avg_mkt)
+
+avg_zip <- hms_zip_discharges %>% group_by(year) %>%
+  summarize(avg = mean(mktshare))
+avg_zip<- as.data.frame(avg_zip)
+
+avgdata <- merge(avg_zip,avg_hrr, by=c("year"))
+avgdata1 <- merge(avgdata, avg_mkt, by=c("year"))
+avgdata1<- avgdata1 %>% rename(zip = avg.x,
+    hrr = avg.y, mkt = avg
+    )
+
+plot1 <- ggplot(avgdata1, aes(x=year)) + 
+  geom_line(aes(y = hrr), color = "darkred")
+plot1
+
+ggplot(avgdata1, aes(x = year, y = value)) + 
+  geom_line(aes(color = variable, linetype = variable)) + 
+  scale_color_manual(values = c("darkred", "steelblue", "black"))
+
+df <- melt(avgdata1, "year")
+
+ggplot(df, aes(x=year, y=value,group=variable,
+                         colour=variable)) + geom_line() + ggtitle("Avg Market Share based on Market Definition") +
+  xlab("Year)") + ylab("Share") + theme(text = element_text(size=10, family="LM Roman 10"))
+
+```

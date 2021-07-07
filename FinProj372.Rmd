@@ -1,0 +1,429 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
+
+Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Cmd+Shift+Enter*. 
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(ggplot2)
+library(xtable)
+library(data.table)
+library(Cairo)
+library(extrafont)
+library(reshape2)
+library(kableExtra)
+library(tidyr)
+library(formattable)
+library(ggpubr)
+library(rjson)
+library(RJSONIO)
+library(xlsx)
+library(RCurl)
+font_import(pattern = "lmroman*")
+loadfonts()
+par(family = "LM Roman 10")
+```
+
+```{r}
+#Import Data
+RushCSV <- read.xlsx("/Users/francescaabulencia/Downloads/362174823_RUSH_UNIVERSITY_MEDICAL_CENTER_STANDARD_CHARGES.xlsx", 1, header=TRUE)
+Rush <- as.data.frame(RushCSV )
+LoyolaCSV <- read.xlsx("/Users/francescaabulencia/Documents/LUMC Standard Charges.xlsx", 1, header=TRUE)
+Loyola <- as.data.frame(LoyolaCSV)
+MacNealCSV <- read.xlsx("/Users/francescaabulencia/Documents/MacNeal Standard Charges.xlsx", 1, header=TRUE)
+MacNeal <- as.data.frame(MacNealCSV)
+```
+
+```{r}
+#Data Cleaning - Loyola
+names(Loyola) <- Loyola[1,]
+Loyola <- Loyola[-1,]
+Loyola <- Loyola[,-1]
+Loyola <- Loyola[, -c(6:13)]
+Loyola <- separate(Loyola, `DRG Cd - Desc`, into = c("DRG", "Description"), extra = "merge")
+#Loyola$`Derived Negotiated Rate Estimate Min` <- as.numeric(Loyola$`Derived Negotiated Rate Estimate Min`)
+#Loyola <- Loyola %>% filter(Loyola$`Derived Negotiated Rate Estimate Min` != 0)
+
+
+MedicareData <- read.csv("/Users/francescaabulencia/Downloads/Inpatient_Prospective_Payment_System__IPPS__Provider_Summary_for_All_Diagnosis-Related_Groups__DRG__-_FY2018.csv", header = TRUE, sep = ",")
+
+MedicareDataIL <- MedicareData %>% filter(MedicareData$STATE_DESC =='IL')
+MedicareDataIL_Rush <- MedicareDataIL %>% filter(MedicareDataIL$FACILITY_NAME == 'RUSH UNIVERSITY MEDICAL CENTER')
+
+MedicareDataIL_Loyola <- MedicareDataIL %>% filter(MedicareDataIL$FACILITY_NAME == 'LOYOLA UNIVERSITY MEDICAL CENTER')
+MedicareDataIL_Loyola <- separate(MedicareDataIL_Loyola, 'DRG_DESC', into = c("DRG", "Description"), extra = "merge")
+MedicareDataIL_Loyola <- MedicareDataIL_Loyola[, -c(4:9)]
+MedicareDataIL_Loyola <- MedicareDataIL_Loyola[, -c(5:6)]
+LoyolaFULL <- merge(Loyola,MedicareDataIL_Loyola,by="DRG")
+
+LoyolaFULL <- LoyolaFULL[, -3] 
+LoyolaFULL <- LoyolaFULL[, c(7,2,1,6,3,4,5,8,9)]
+LoyolaFULL$MEAN_MEDICARE_REIMBURSEMENT <- as.numeric(LoyolaFULL$MEAN_MEDICARE_REIMBURSEMENT)
+
+LoyolaFULL <- LoyolaFULL %>% 
+  rename(
+    'Provider ID' = PROVIDER_ID,
+    'Total Discharges' = DISCHARGE_COUNT_SUM,
+    'Minimum Negotiated Payment'= 'Derived Negotiated Rate Estimate Min',
+    'Maximum Negotiated Payment'= 'Derived Negotiated Rate Estimate Max',
+    'Medicare Reimbursement' = MEAN_MEDICARE_REIMBURSEMENT,
+    'Description' = 'Description.y'
+    )
+
+
+LoyolaFULL$`Gross Charge`<- as.numeric(LoyolaFULL$`Gross Charge`)
+LoyolaFULL$`Minimum Negotiated Payment`<- as.numeric(LoyolaFULL$`Minimum Negotiated Payment`)
+LoyolaFULL$`Maximum Negotiated Payment`<- as.numeric(LoyolaFULL$`Maximum Negotiated Payment`)
+LoyolaFULL$`Medicare Reimbursement`<- as.numeric(LoyolaFULL$`Medicare Reimbursement`)
+
+LoyolaFULL$`Mean Negotiated Payment` <- (LoyolaFULL$`Minimum Negotiated Payment`+ LoyolaFULL$`Maximum Negotiated Payment`)/2
+
+LoyolaFULL$`Mean Negotiated Payment` <- as.numeric(LoyolaFULL$'Mean Negotiated Payment')
+figL1 <- LoyolaFULL %>% summarize('Mean Gross Charge' = mean(`Gross Charge`), 'Mean Medicare Reimbursement'=mean(`Medicare Reimbursement`), 'Mean Negotiated Charge' = mean(`Mean Negotiated Payment`, na.rm=TRUE))
+
+figL1
+
+#xtable(figL1 , type = "latex")
+
+figL1
+
+LoyolaFull_sumtab1 <- LoyolaFULL[c(5,9,6,7)]
+LoyolaFull_sumtab <- summary(LoyolaFull_sumtab1)
+
+LoyolaFull_sumtab %>%   kbl(caption = "Table 2: Loyola University Medical Center Data Summary") %>%
+  kable_classic(full_width = T, html_font = "Times New Roman") 
+
+Loyoladata_long <- gather(LoyolaFull_sumtab1, condition, amount, 'Gross Charge':'Maximum Negotiated Payment', factor_key=TRUE)
+
+Loyoladata_long$Hospital <- 'Loyola University Medical Center'
+```
+
+```{r}
+#Data Cleaning - MacNeal
+names(MacNeal) <- MacNeal[1,]
+MacNeal <- MacNeal[-1,]
+MacNeal <- MacNeal[, -c(1,7:13)]
+MacNeal <- separate(MacNeal, `DRG Cd - Desc`, into = c("DRG", "Description"), extra = "merge")
+
+MedicareDataIL_MacNeal <- MedicareDataIL %>% filter(MedicareDataIL$PROVIDER_ID == '140054')
+MedicareDataIL_MacNeal <- separate(MedicareDataIL_MacNeal, 'DRG_DESC', into = c("DRG", "Description"), extra = "merge")
+MedicareDataIL_MacNeal <- MedicareDataIL_MacNeal[, -c(4:9)]
+MedicareDataIL_MacNeal <- MedicareDataIL_MacNeal[, -c(5:6)]
+MacNealFULL <- merge(MacNeal,MedicareDataIL_MacNeal, by="DRG")
+MacNealFULL <- MacNealFULL[, -3] 
+MacNealFULL <-MacNealFULL[, c(7,2,1,6,3,4,5,8,9)]
+
+
+MacNealFULL <- MacNealFULL %>% 
+  rename(
+    'Provider ID' = PROVIDER_ID,
+    'Total Discharges' = DISCHARGE_COUNT_SUM,
+    'Minimum Negotiated Payment'= 'Derived Negotiated Rate Estimate Min',
+    'Maximum Negotiated Payment'= 'Derived Negotiated Rate Estimate Max',
+    'Medicare Reimbursement' = MEAN_MEDICARE_REIMBURSEMENT,
+    'Description' = 'Description.y'
+    )
+MacNealFULL$`Gross Charge` <- as.numeric(MacNealFULL$`Gross Charge`)
+MacNealFULL$`Medicare Reimbursement` <- as.numeric(MacNealFULL$`Medicare Reimbursement`)
+MacNealFULL$`Minimum Negotiated Payment` <- as.numeric(MacNealFULL$`Minimum Negotiated Payment`)
+MacNealFULL$`Maximum Negotiated Payment` <- as.numeric(MacNealFULL$`Maximum Negotiated Payment`)
+MacNealFULL$`Mean Negotiated Payment` <- (MacNealFULL$`Minimum Negotiated Payment`+ MacNealFULL$`Maximum Negotiated Payment`)/2
+figM1 <- MacNealFULL %>% summarize('Mean Gross Charge' = mean(`Gross Charge`), 'Mean Medicare Reimbursement'=mean(`Medicare Reimbursement`), 'Mean Min. Negotiated Charge' = mean(`Minimum Negotiated Payment`, na.rm=TRUE), 'Mean Max. Negotiated Charge' = mean(`Maximum Negotiated Payment`, na.rm=TRUE))
+
+figM1
+
+xtable(figM1 , type = "latex")
+
+MacNealFULL_sumtab1 <- MacNealFULL[c(5,9,6,7)]
+
+MacNealFULL_sumtab <- summary(MacNealFULL_sumtab1)
+MacNealFULL_sumtab %>%   kbl(caption = "Table 3: MacNeal Hospital Data Summary") %>%
+  kable_classic(full_width = T, html_font = "Times New Roman") 
+
+
+MacNealdata_long <- gather(MacNealFULL_sumtab1, condition, amount, 'Gross Charge':'Maximum Negotiated Payment', factor_key=TRUE)
+MacNealdata_long$Hospital <- 'MacNeal Hospital'
+```
+
+```{r}
+Rush <- Rush[,-c(1,7)]
+
+Rush <- separate(Rush, `DRG.Code`, into = c("D", "DRG"), sep='S',extra = "merge")
+Rush <- Rush[,-1]
+
+MedicareDataIL_Rush <- MedicareDataIL %>% filter(MedicareDataIL$FACILITY_NAME == 'RUSH UNIVERSITY MEDICAL CENTER')
+MedicareDataIL_Rush <- separate(MedicareDataIL_Rush, 'DRG_DESC', into = c("DRG", "Description"), extra = "merge")
+
+MedicareDataIL_Rush <- MedicareDataIL_Rush[, -c(4:9)]
+MedicareDataIL_Rush <- MedicareDataIL_Rush[, -c(5:6)]
+
+RushFULL <- merge(Rush,MedicareDataIL_Rush, by="DRG")
+
+RushFULL <- RushFULL[,-2]
+
+RushFULL <- RushFULL %>% 
+  rename(
+    'Provider ID' = PROVIDER_ID,
+    'Total Discharges' = DISCHARGE_COUNT_SUM,
+    'Minimum Negotiated Payment'= 'De.Identified.Minimum.Negotiated.Charge',
+    'Maximum Negotiated Payment'= 'De.Identified.Maximum.Negotiated.Charge',
+    'Medicare Reimbursement' = MEAN_MEDICARE_REIMBURSEMENT,
+    'Gross Charge' = 'Gross.Charge'
+    )
+
+RushFULL$Hospital <- 'Rush University Medical Center'
+
+RushFULL <-RushFULL[, c(6,9,1,5,2,3,4,7,8)]
+
+
+RushFULL$`Gross Charge` <- as.numeric(RushFULL$`Gross Charge`)
+RushFULL$`Medicare Reimbursement` <- as.numeric(RushFULL$`Medicare Reimbursement`)
+RushFULL$`Minimum Negotiated Payment` <- as.numeric(RushFULL$`Minimum Negotiated Payment`)
+RushFULL$`Maximum Negotiated Payment` <- as.numeric(RushFULL$`Maximum Negotiated Payment`)
+RushFULL$`Mean Negotiated Payment` <- (RushFULL$`Minimum Negotiated Payment`+ RushFULL$`Maximum Negotiated Payment`)/2
+figR1 <- RushFULL %>% summarize('Mean Gross Charge' = mean(`Gross Charge`), 'Mean Medicare Reimbursement'=mean(`Medicare Reimbursement`), 'Mean Min. Negotiated Charge' = mean(`Minimum Negotiated Payment`, na.rm=TRUE), 'Mean Max. Negotiated Charge' = mean(`Maximum Negotiated Payment`, na.rm=TRUE))
+
+figR1
+
+xtable(figR1 , type = "latex")
+
+
+DatasetFINAL <- rbind(LoyolaFULL, MacNealFULL, RushFULL)
+
+DatasetFINAL$`Gross Charge`<- as.numeric(DatasetFINAL$`Gross Charge`)
+DatasetFINAL$`Minimum Negotiated Payment`<- as.numeric(DatasetFINAL$`Minimum Negotiated Payment`)
+DatasetFINAL$`Maximum Negotiated Payment`<- as.numeric(DatasetFINAL$`Maximum Negotiated Payment`)
+DatasetFINAL$`Medicare Reimbursement`<- as.numeric(DatasetFINAL$`Medicare Reimbursement`)
+
+DatasetFINAL [DatasetFINAL  == 0] <- NA
+
+
+
+DatasetFINAL$Hospital[DatasetFINAL$Hospital=="LUMC (Maywood, IL)"] <- "Loyola University Medical Center"
+
+DatasetFINAL$Hospital[DatasetFINAL$Hospital=="MacNeal (Berwyn, IL)"] <- "MacNeal Hospital"
+
+#write.csv(DatasetFINAL,"/Users/francescaabulencia/Downloads/ChicagoMarket.csv", row.names = FALSE)
+RushFULL_sumtab1 <- RushFULL[c(5,9,6,7)]
+
+RushFULL_sumtab <- summary(RushFULL_sumtab1)
+RushFULL_sumtab %>%   kbl(caption = "Table 1: Rush University Medical Center Data Summary") %>%
+  kable_classic(full_width = T, html_font = "Times New Roman") 
+
+
+RUSHdata_long <- gather(RushFULL_sumtab1, condition, amount, 'Gross Charge':'Maximum Negotiated Payment', factor_key=TRUE)
+RUSHdata_long$Hospital <- 'Rush University Medical Center'
+
+```
+
+
+```{r}
+# calculating market share for market
+MedicareData423 <- MedicareDataIL %>% filter(MedicareDataIL$FACILITY_NAME == 'ALEXIAN BROTHERS MEDICAL CENTER 1'
+                                             | MedicareDataIL$FACILITY_NAME ==	'ADVENTIST LA GRANGE MEMORIAL HOSPITAL'
+                                             | MedicareDataIL$FACILITY_NAME ==	'NORTHWEST COMMUNITY HOSPITAL 1'
+                                             | MedicareDataIL$FACILITY_NAME ==	'NORTHWESTERN MEMORIAL HOSPITAL'
+                                             | MedicareDataIL$FACILITY_NAME ==	'RUSH UNIVERSITY MEDICAL CENTER'
+                                             | MedicareDataIL$FACILITY_NAME ==	'THE UNIVERSITY OF CHICAGO MEDICAL CENTER'
+                                             | MedicareDataIL$FACILITY_NAME ==	'JOHN H STROGER JR HOSPITAL'
+                                             | MedicareDataIL$FACILITY_NAME ==	'UNIVERSITY OF ILLINOIS HOSPITAL'
+                                             | MedicareDataIL$FACILITY_NAME ==	'MERCY HOSPITAL AND MEDICAL CENTER'
+                                             | MedicareDataIL$FACILITY_NAME ==	'LOYOLA UNIVERSITY MEDICAL CENTER'
+                                             | MedicareDataIL$FACILITY_NAME ==	'ADVOCATE CHRIST HOSPITAL & MEDICAL CENTER'
+                                             | MedicareDataIL$FACILITY_NAME ==	'PALOS COMMUNITY HOSPITAL'
+                                             | MedicareDataIL$FACILITY_NAME ==	'PRESENCE SAINT JOSEPH MEDICAL CENTER'
+                                             | MedicareDataIL$FACILITY_NAME ==	'PRESENCE SAINTS MARY AND ELIZABETH MEDICAL CENTER'
+                                             | MedicareDataIL$FACILITY_NAME ==	'PRESENCE RESURRECTION MEDICAL CENTER'
+                                             | MedicareDataIL$FACILITY_NAME ==	'PROVIDENT HOSPITAL OF CHICAGO'
+                                             | MedicareDataIL$FACILITY_NAME ==	'MACNEAL  HOSPITAL'
+                                             | MedicareDataIL$FACILITY_NAME ==	'METROSOUTH MEDICAL CENTER'
+                                             | MedicareDataIL$FACILITY_NAME ==	'ADVOCATE ILLINOIS MASONIC MEDICAL CENTER'
+                                             | MedicareDataIL$FACILITY_NAME ==	'COMMUNITY FIRST MEDICAL CENTER'
+                                             | MedicareDataIL$FACILITY_NAME ==	'SWEDISH COVENANT HOSPITAL'
+                                             | MedicareDataIL$FACILITY_NAME ==	'HOLY CROSS HOSPITAL'
+                                             | MedicareDataIL$FACILITY_NAME ==	'NORWEGIAN-AMERICAN HOSPITAL'
+                                             | MedicareDataIL$FACILITY_NAME ==	'METHODIST HOSPITAL OF CHICAGO'
+                                             | MedicareDataIL$FACILITY_NAME ==	'LORETTO HOSPITAL'
+                                             | MedicareDataIL$FACILITY_NAME ==	'ADVOCATE TRINITY HOSPITAL'
+                                             | MedicareDataIL$FACILITY_NAME ==	'LOUIS A WEISS MEMORIAL HOSPITAL'
+                                             | MedicareDataIL$FACILITY_NAME ==	'SAINT ANTHONY HOSPITAL'
+                                             | MedicareDataIL$FACILITY_NAME ==	'SOUTH SHORE HOSPITAL'
+                                             | MedicareDataIL$FACILITY_NAME ==	'THOREK MEMORIAL HOSPITAL'
+                                             | MedicareDataIL$FACILITY_NAME ==	'ROSELAND COMMUNITY HOSPITAL'
+                                             | MedicareDataIL$FACILITY_NAME ==	'JACKSON PARK HOSPITAL'
+                                             | MedicareDataIL$FACILITY_NAME ==	'ST BERNARD HOSPITAL'
+                                             | MedicareDataIL$FACILITY_NAME ==	'NORTHSHORE UNIVERSITY HEALTHSYSTEM EVANSTON HOSP'
+                                             | MedicareDataIL$FACILITY_NAME ==	'PRESENCE SAINT FRANCIS HOSPITAL'
+                                             | MedicareDataIL$FACILITY_NAME ==	'LITTLE COMPANY OF MARY HOSPITAL'
+                                             | MedicareDataIL$FACILITY_NAME ==	'INGALLS MEMORIAL HOSPITAL'
+                                             | MedicareDataIL$FACILITY_NAME ==	'ADVOCATE SOUTH SUBURBAN HOSPITAL'
+                                             | MedicareDataIL$FACILITY_NAME ==	'ST ALEXIUS MEDICAL CENTER'
+                                             | MedicareDataIL$FACILITY_NAME ==	'WESTLAKE COMMUNITY HOSPITAL'
+                                             | MedicareDataIL$FACILITY_NAME ==	'LOYOLA GOTTLIEB MEMORIAL HOSPITAL'
+                                             | MedicareDataIL$FACILITY_NAME ==	'WEST SUBURBAN MEDICAL CENTER'
+                                             | MedicareDataIL$FACILITY_NAME ==	'RUSH OAK PARK HOSPITAL'
+                                             | MedicareDataIL$FACILITY_NAME ==	'FRANCISCAN HEALTH OLYMPIA & CHICAGO HEIGHTS'
+                                             | MedicareDataIL$FACILITY_NAME ==	'ADVOCATE LUTHERAN GENERAL HOSPITAL'
+                                             )
+
+
+MedicareData423$DISCHARGE_COUNT_SUM <- as.numeric(MedicareData423$DISCHARGE_COUNT_SUM)
+MedicareData423 %>% group_by(FACILITY_NAME) %>% summarize
+
+
+totalB <- aggregate(MedicareData423$DISCHARGE_COUNT_SUM~MedicareData423$FACILITY_NAME,MedicareData423,sum)
+
+totalB$'Market Share' <- totalB$`MedicareData423$DISCHARGE_COUNT_SUM`/sum(totalB$`MedicareData423$DISCHARGE_COUNT_SUM`)
+
+totalB <- totalB %>% rename ('FACILITY_NAME' = 'MedicareData423$FACILITY_NAME')
+totalB <- totalB %>% rename ('Total Discharge' = 'MedicareData423$DISCHARGE_COUNT_SUM')
+
+totalB$`Market Share` <- round(totalB$`Market Share`, digits = 3)
+
+
+totalB%>% kbl(caption = "Table 4: Market Share of Hospitals Based on Total Discharges (2018)") %>%
+  kable_classic(full_width = F, html_font = "Times New Roman") 
+
+```
+
+```{r}
+MedicareData423_HF <- MedicareData423 %>% filter(DRG_DESC == '291 - HEART FAILURE & SHOCK W MCC')
+MedicareData423_HF <- MedicareData423_HF[, -c(4,5,6,7,8, 10, 11)]
+
+MedicareData423_HF_LRM <- MedicareData423_HF %>% filter(FACILITY_NAME == 'LOYOLA UNIVERSITY MEDICAL CENTER'
+                                                        |FACILITY_NAME == 'RUSH UNIVERSITY MEDICAL CENTER'
+                                                        |FACILITY_NAME == 'MACNEAL  HOSPITAL')
+
+MedicareData423_HF_LRM <- separate(MedicareData423_HF_LRM, 'DRG_DESC', into = c("DRG", "Description"), extra = "merge")
+
+#NEED TO MERGE MedicareData423_HF_LRM MEDICARE DATA WITH HOSPITAL DATA
+
+mergeA <- merge(totalB, MedicareData423_HF_LRM, by='FACILITY_NAME')
+mergeA <- mergeA %>% rename('Medicare Reimbursement'= MEAN_MEDICARE_REIMBURSEMENT)
+mergeB <- merge(mergeA, DatasetFINAL_a)
+mergeC <- mergeB[c(4,11,12,13,3,6)]
+mergeC <- mergeC %>% rename('Facility Name'=FACILITY_NAME)
+#Table5 <- MedicareData423_HF_LRM[c(4,5,6,7)]
+mergeC %>% kbl(caption = "Table 5: Hospital Pricing and Market Share Data (MS-DRG 291)") %>%
+  kable_classic(full_width = F, html_font = "Times New Roman") 
+
+
+mergeC$'Percent Increase Between Medicare and Max Negotiated Payment' <- ((mergeC$`Maximum Negotiated Payment` - mergeC$`Medicare Reimbursement`)/mergeC$`Medicare Reimbursement`)*100
+ 
+mergeC$'Percent Increase Between Medicare and Min Negotiated Payment' <- ((mergeC$`Minimum Negotiated Payment` - mergeC$`Medicare Reimbursement`)/mergeC$`Medicare Reimbursement`)*100
+
+table7 <- mergeC[c(1,3,4,5,7,8)]
+
+table7[,"Percent Increase Between Medicare and Min Negotiated Payment"]=round(table7[,"Percent Increase Between Medicare and Min Negotiated Payment"],1)
+
+table7[,"Percent Increase Between Medicare and Max Negotiated Payment"]=round(table7[,"Percent Increase Between Medicare and Max Negotiated Payment"],1)
+
+mergeF$'Percent Increase Between Medicare and Max Negotiated Payment' <- ((mergeF$`Maximum Negotiated Payment` - mergeF$`Medicare Reimbursement`)/mergeF$`Medicare Reimbursement`)*100
+ 
+mergeF$'Percent Increase Between Medicare and Min Negotiated Payment' <- ((mergeF$`Minimum Negotiated Payment` - mergeF$`Medicare Reimbursement`)/mergeF$`Medicare Reimbursement`)*100
+
+table8 <- mergeF[c(1,3,4,5,7,8)]
+
+table8[,"Percent Increase Between Medicare and Min Negotiated Payment"]=round(table8[,"Percent Increase Between Medicare and Min Negotiated Payment"],1)
+table8[,"Percent Increase Between Medicare and Max Negotiated Payment"]=round(table8[,"Percent Increase Between Medicare and Max Negotiated Payment"],1)
+
+table7 %>% kbl(caption = "Table 7: Difference in Medicare Reimbursement and Negotiated Payment (MS-DRG 291") %>%
+  kable_classic(full_width = F, html_font = "Times New Roman") 
+
+table8 %>% kbl(caption = "Table 8: Hospital Pricing and Market Share Data (MS-DRG 897)") %>%
+  kable_classic(full_width = F, html_font = "Times New Roman") 
+
+```
+
+```{r}
+MedicareData423_GI <- MedicareData423 %>% filter(DRG_DESC == '897 - ALCOHOL/DRUG ABUSE OR DEPENDENCE W/O REHABILITATION THERAPY W/O MCC')
+
+MedicareData423_PN <- MedicareData423 %>% filter(DRG_DESC == '193 - SIMPLE PNEUMONIA & PLEURISY W MCC')
+MedicareData423_PN <- MedicareData423_PN[, -c(4,5,6,7,8, 10, 11)]
+MedicareData423_PN_LRM <- MedicareData423_PN %>% filter(FACILITY_NAME == 'LOYOLA UNIVERSITY MEDICAL CENTER'
+                                                        |FACILITY_NAME == 'RUSH UNIVERSITY MEDICAL CENTER'
+                                                        |FACILITY_NAME == 'MACNEAL  HOSPITAL')
+MedicareData423_PN_LRM <- separate(MedicareData423_PN_LRM, 'DRG_DESC', into = c("DRG", "Description"), extra = "merge")
+
+MedicareData423_GI <- MedicareData423_GI[, -c(4,5,6,7,8, 10, 11)]
+
+MedicareData423_GI_LRM <- MedicareData423_GI %>% filter(FACILITY_NAME == 'LOYOLA UNIVERSITY MEDICAL CENTER'
+                                                        |FACILITY_NAME == 'RUSH UNIVERSITY MEDICAL CENTER'
+                                                        |FACILITY_NAME == 'MACNEAL  HOSPITAL')
+
+MedicareData423_GI_LRM <- separate(MedicareData423_GI_LRM, 'DRG_DESC', into = c("DRG", "Description"), extra = "merge")
+
+DatasetFINAL_b <- DatasetFINAL %>% filter(DRG == '897') %>% filter(Hospital == 'Loyola University Medical Center'
+                                                            |Hospital == 'Rush University Medical Center'
+                                                            |Hospital == 'MacNeal Hospital')
+
+DatasetFINAL_c <- DatasetFINAL %>% filter(DRG == '193') %>% filter(Hospital == 'Loyola University Medical Center'
+                                                            |Hospital == 'Rush University Medical Center'
+                                                            |Hospital == 'MacNeal Hospital')
+
+
+mergeD <- merge(totalB, MedicareData423_GI_LRM, by='FACILITY_NAME')
+mergeD <- mergeD %>% rename('Medicare Reimbursement'= MEAN_MEDICARE_REIMBURSEMENT)
+mergeE <- merge(mergeD, DatasetFINAL_b)
+mergeF <- mergeE[c(4,11,12,13,3,6)]
+mergeF <- mergeF %>% rename('Facility Name'=FACILITY_NAME)
+
+mergeF %>% kbl(caption = "Table 6: Hospital Pricing and Market Share Data (MS-DRG 897)") %>%
+  kable_classic(full_width = F, html_font = "Times New Roman") 
+
+
+mergeG <- merge(totalB, MedicareData423_PN_LRM, by='FACILITY_NAME')
+mergeG <- mergeG %>% rename('Medicare Reimbursement'= MEAN_MEDICARE_REIMBURSEMENT)
+mergeH <- merge(mergeG, DatasetFINAL_c)
+mergeI <- mergeH[c(4,11,12,13,3,6)]
+mergeI <- mergeI %>% rename('Facility Name'=FACILITY_NAME)
+mergeI$'Mean Negotiated Payment' <- (mergeI$`Minimum Negotiated Payment` + mergeI$`Maximum Negotiated Payment`)/2
+```
+
+```{r}
+#boxplot data
+
+ALLdatalong <- rbind(Loyoladata_long,  RUSHdata_long, MacNealdata_long)
+
+
+p2 <- ggplot(ALLdatalong, aes(x=condition, y=amount, fill=Hospital)) + 
+    geom_boxplot() +
+    facet_wrap(~condition, scale="free")
+
+p2 + ggtitle('Figure 1: Box Plot of Charge, Negotiated Payments, and  \n Medicare Reimbursement by Hospital') + theme(text=element_text(family="Times New Roman", size=12)) 
+
+
+p3 <- ggplot(ALLdatalong, aes(x=condition, y=amount, fill=Hospital)) +
+    geom_violin() +
+    facet_wrap(~condition, scale="free")
+
+p3 + ggtitle('Figure 2: Distribution of Charge, Negotiated Payments, and Medicare Reimbursement \n by Hospital') + theme(text=element_text(family="Times New Roman", size=12)) 
+
+p4 <- ggplot(ALLdatalong, aes(x=condition, y=amount, fill=Hospital)) + geom_boxplot(width=0.1) +geom_violin(width=1.4) + facet_wrap(~condition, scale="free")
+
+p4
+
+
+#Negotiated Payment vs Market Share
+
+
+ggplot(mergeC, aes(x=`Market Share`, y=`Minimum Negotiated Payment`, color=`Facility Name`)) +
+  geom_point(size=5) + ggtitle('Figure 3: Market Share vs Minimum \n Negotiated Payement for MS-DRG 291') + theme(text=element_text(family="Times New Roman", size=12)) + ylim(10000, 50000)
+
+ggplot(mergeC, aes(x=`Market Share`, y=`Maximum Negotiated Payment`, color=`Facility Name`)) +
+  geom_point(size=5) + ggtitle('Figure 4: Market Share vs Maximum \n Negotiated Payement for MS-DRG 291') + theme(text=element_text(family="Times New Roman", size=12)) + ylim(10000, 50000)
+
+ggplot(mergeF, aes(x=`Market Share`, y=`Minimum Negotiated Payment`, color=`Facility Name`)) +
+  geom_point(size=5) + ggtitle('Figure 5: Market Share vs Minimum  \n Negotiated Payement for MS-DRG 897') + theme(text=element_text(family="Times New Roman", size=12)) +ylim(5000, 30000)
+
+ggplot(mergeF, aes(x=`Market Share`, y=`Maximum Negotiated Payment`, color=`Facility Name`)) +
+  geom_point(size=5) + ggtitle('Figure 6: Market Share vs Maximum  \n Negotiated Payement for MS-DRG 897') + theme(text=element_text(family="Times New Roman", size=12))  +ylim(5000, 30000)
+
+```
+
+

@@ -1,0 +1,228 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
+
+Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Cmd+Shift+Enter*. 
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(ggplot2)
+library(xtable)
+library(data.table)
+library(Cairo)
+library(extrafont)
+library(reshape2)
+library(kableExtra)
+library(tidyr)
+library(formattable)
+font_import(pattern = "lmroman*")
+loadfonts()
+par(family = "LM Roman 10")
+```
+
+```{r}
+q4data <- readRDS("/Users/francescaabulencia/Downloads/hwk2_data_q4.Rdata")
+q4data <- as.data.frame(q4data)
+df = subset(q4data, select = -c(city,state,zip, average_payment) )
+
+#Q4 Part A
+partA <- subset(q4data, year=="2013")
+df_uniq <- unique(partA$npi)
+length(df_uniq)
+
+#Q4 Part B
+meltdata <- melt(df, id=c("npi","count"))
+meltdata <- meltdata[order(as.integer(meltdata$npi),decreasing = FALSE), ]
+meltdata <- subset(meltdata, select=-c(variable))
+names(meltdata)[names(meltdata) == "value"] <- "year"
+
+spreaddata <- spread(meltdata, year, count)
+spreaddata <- spreaddata[!is.na(spreaddata$'2013'),]
+
+mean(spreaddata[["2013"]])
+
+a <- mean(spreaddata$"2013", na.rm = TRUE) 
+b <- mean(spreaddata$"2014", na.rm = TRUE)      
+c <- mean(spreaddata$"2015", na.rm = TRUE) 
+
+label_y <- c(a, b, c)
+
+data_long <- gather(spreaddata, condition, measurement, "2013":"2015", factor_key=TRUE)
+
+plot1 <- ggplot(data_long, aes(x = factor(condition), y = measurement)) + 
+  stat_summary(fun = "mean", geom = "bar")
+plot1 <- plot1 + theme(text = element_text(size=10, family="LM Roman 10")) + ggtitle("Average Number of Injections Per Year") + xlab("Year") + ylab("# of Epidural Steroidal Injections") + scale_y_continuous(breaks = seq(0, 150, by = 10)) 
+
+plot1
+names(data_long)[names(data_long) == "condition"] <- "year"
+names(data_long)[names(data_long) == "measurement"] <- "count"
+Means <- data_long%>%
+  group_by(year) %>% summarise_at(c("count"), mean, na.rm = TRUE)
+formattable(Means, align =c("l","c"), 
+            list(`year` = formatter(
+              "span", style = ~ style(color = "blue",font.weight = "bold"))))
+
+kable(Means , "latex", booktabs = T) %>%
+  kable_styling(latex_options = c("striped", "scale_down")) %>% as_image(width = 10)
+
+xtable(Means)
+
+#Q4 Part C 
+#Among physicians with some injections in both 2013 and 2014, identify the physicians with the 10 largest reductions in injections from 2013 to 2014 (i.e., I want to see the physicians with the largest reductions, but exclude physicians that dropped to 0).
+
+q4partC <- spreaddata[1:(length(spreaddata)-1)]
+q4partC <- q4partC %>% drop_na()
+q4partC$'Amount Decrease' <- q4partC$'2013' - q4partC$'2014'
+
+q4partC <- q4partC[order(as.integer(q4partC$'Amount Decrease'),decreasing = TRUE), ]
+
+q4partC_10LargestAmount <- q4partC %>% slice(1:10)
+
+ten <- q4partC_10LargestAmount$npi
+lastdata <- filter(spreaddata, npi %in% ten)
+
+
+lastdataMELT <- melt(q4partC_10LargestAmount, id.vars="npi", value.name="value", variable.name="Year")
+
+formattable(q4partC_10LargestAmount, align =c("l","c","c","c"), 
+            list(`npi` = formatter(
+              "span", style = ~ style(color = "blue",font.weight = "bold"))))
+
+#kable(q4partC_10LargestAmount  , "latex", booktabs = T) %>%
+#  kable_styling(latex_options = c("striped", "scale_down")) %>% as_image(width = 1)
+
+q4partC_10LargestAmount <- q4partC_10LargestAmount[1:(length(q4partC_10LargestAmount)-1)]
+q4partC_10LargestAmountMELT <- melt(q4partC_10LargestAmount, id.vars="npi", value.name="value", variable.name="Year")
+
+
+plot2 <- ggplot(q4partC_10LargestAmountMELT, aes(x=Year, y=value, group = npi, colour = npi)) +
+    geom_line() +
+    geom_point( size=4, shape=21, fill="white")
+
+plot2 <- plot2 + theme(text = element_text(size=10, family="LM Roman 10")) + ggtitle("Top 10 Physicians with Largest Decline in Epidural Steroidal Injections") + xlab("Year") + ylab("# of Epidural Steroidal Injections") + scale_y_continuous(breaks = seq(0, 4200, by = 300)) 
+plot2
+
+
+q4partC <- spreaddata[1:(length(spreaddata)-1)]
+q4partC$'Percentage Change' <- ((q4partC$'2014' - q4partC$'2013')/q4partC$'2013')*100
+q4partC <- q4partC[order(as.integer(q4partC$'Percentage Change'),decreasing = FALSE), ]
+q4partC_10LargestPercentage <- q4partC %>% slice(1:10)
+q4partC_10LargestPercentage <- q4partC_10LargestPercentage %>% mutate_at(vars('Percentage Change'), funs(round(., 1)))
+
+formattable(q4partC_10LargestPercentage, align =c("l","c","c","c"), 
+            list(`npi` = formatter(
+              "span", style = ~ style(color = "blue",font.weight = "bold"))))
+
+#kable(q4partC_10LargestPercentage  , "latex", booktabs = T) %>%
+  #kable_styling(latex_options = c("striped", "scale_down")) %>% as_image(width = 1)
+
+q4partD <- spreaddata
+
+q4partD <- filter(q4partD, npi %in% ten)
+q4partDMELT <- melt(q4partD, id.vars="npi", value.name="value", variable.name="Year")
+
+plot3 <- ggplot(q4partDMELT, aes(x=Year, y=value, group = npi, colour = npi)) +
+    geom_line() +
+    geom_point( size=4, shape=21, fill="white")
+
+plot3 <- plot3 + theme(text = element_text(size=10, family="LM Roman 10")) + ggtitle("Top 10 Physicians with Largest Decline in Epidural Steroidal Injections") + xlab("Year") + ylab("# of Epidural Steroidal Injections") + scale_y_continuous(breaks = seq(0, 4200, by = 300)) 
+
+plot3
+```
+
+```{r}
+#Q5
+q5data <- readRDS("/Users/francescaabulencia/Downloads/hwk2_data_q5.Rdata")
+
+codes <- c(99201, 99202, 99203, 99204, 99205, 99211, 99212, 99213, 99214, 99215)
+
+q5data_filterA <- filter(q5data, hcpcs_code >= 99201 & hcpcs_code <= 99205)
+q5data_filterB <- filter(q5data, hcpcs_code >= 99211 & hcpcs_code <= 99215)
+
+q5dataEM <- rbind(q5data_filterA, q5data_filterB)
+q5dataEM <- subset(q5dataEM , select = -c(description,city,state,zip, average_payment, year, hcpcs_code) )
+
+top <- q5dataEM  %>% group_by(npi) %>% summarise(values = sum(count))
+
+top_order <- top[order(as.integer(top$values), decreasing = TRUE), ]
+
+names(top_order)[names(top_order) == "values"] <- "Total E&M Visits"
+topLargestAmount <- top_order %>% slice(1:10)
+
+qty <- topLargestAmount$npi
+
+qty
+
+formattable(topLargestAmount, align =c("l","c"), 
+            list(`npi` = formatter(
+              "span", style = ~ style(color = "blue",font.weight = "bold"))))
+
+
+#kable(topLargestAmount , "latex", booktabs = T) %>%
+#  kable_styling(latex_options = c("striped", "scale_down")) %>% as_image(width = 1)
+
+xtable(topLargestAmount)
+```
+
+```{r}
+#Q5
+q5data <- readRDS("/Users/francescaabulencia/Downloads/hwk2_data_q5.Rdata")
+
+codes <- c(99201, 99202, 99203, 99204, 99205, 99211, 99212, 99213, 99214, 99215)
+
+q5data_filterA <- filter(q5data, hcpcs_code >= 99201 & hcpcs_code <= 99205)
+q5data_filterB <- filter(q5data, hcpcs_code >= 99211 & hcpcs_code <= 99215)
+
+q5dataEM <- rbind(q5data_filterA, q5data_filterB)
+
+q5data_filterA <- filter(q5data, hcpcs_code >= 99201 & hcpcs_code <= 99205)
+q5data_filterB <- filter(q5data, hcpcs_code >= 99211 & hcpcs_code <= 99215)
+
+q5dataEM <- rbind(q5data_filterA, q5data_filterB)
+q5dataEM2 <- subset(q5dataEM , select = -c(description,city,state,zip, year) )
+
+q5dataEM2 <- filter(q5dataEM2, npi %in% qty)
+
+
+q5dataEM2$'total payment' <- q5dataEM2$count * q5dataEM2$average_payment
+
+
+q5dataEM2$RVU <- ifelse(q5dataEM2$hcpcs_code == 99202, 0,
+       ifelse(q5dataEM2$hcpcs_code == 99201, 1, 
+       ifelse(q5dataEM2$hcpcs_code == 99203, 1.127, 
+       ifelse(q5dataEM2$hcpcs_code == 99204, 1.07, 
+       ifelse(q5dataEM2$hcpcs_code == 99205, 1.104,
+       ifelse(q5dataEM2$hcpcs_code == 99211, 0,
+       ifelse(q5dataEM2$hcpcs_code == 99212, 1.458,
+       ifelse(q5dataEM2$hcpcs_code == 99213, 1.34,
+       ifelse(q5dataEM2$hcpcs_code == 99214, 1.28 ,
+       ifelse(q5dataEM2$hcpcs_code == 99215, 1.327, 0        ))))))))))
+
+q5dataEM2$new <- q5dataEM2$RVU * q5dataEM2$'total payment'
+q5dataEM2$new <- as.numeric(q5dataEM2$new)
+
+q5dataEM3 <- q5dataEM2  %>% group_by(npi) %>% summarise(values = sum(new))
+
+q5dataEM4 <- q5dataEM2  %>% group_by(npi) %>% summarise(values = sum(`total payment`))
+
+q5dataEM3$'Total Payment (Before New RVU)' <- q5dataEM4$values
+
+names(q5dataEM3)[names(q5dataEM3) == "values"] <- "Total Payment (After New RVU)"
+
+q5dataEM3 <- q5dataEM3 %>% relocate("Total Payment (Before New RVU)", "Total Payment (After New RVU)", .after = npi)
+
+q5dataEM3$'Amount Increase' <- q5dataEM3$`Total Payment (After New RVU)`-q5dataEM3$`Total Payment (Before New RVU)`
+
+q5dataEM3 <- merge(q5dataEM3,topLargestAmount,by="npi")
+
+q5dataEM3 <- q5dataEM3 %>% relocate("Total E&M Visits", .after = npi)
+
+q5dataEM3 <- q5dataEM3[order(as.integer(q5dataEM3$`Total E&M Visits`),decreasing = TRUE), ]
+
+
+xtable(q5dataEM3)
+```
